@@ -9,9 +9,7 @@
 alias i := install
 alias h := help
 alias s := server
-alias w := web
 alias d := dev
-alias b := build
 alias t := test
 alias c := clean
 
@@ -36,12 +34,22 @@ help:
 # Install all dependencies
 [group('setup')]
 install:
-  bun install
+  uv sync
 
-# Update all dependencies
+# Install with dev dependencies
 [group('setup')]
-update:
-  bun update
+install-dev:
+  uv sync --extra dev
+
+# Add a new dependency
+[group('setup')]
+add *PACKAGES:
+  uv add {{PACKAGES}}
+
+# Remove a dependency
+[group('setup')]
+remove *PACKAGES:
+  uv remove {{PACKAGES}}
 
 # -----------
 # Development
@@ -50,39 +58,31 @@ update:
 # Start the backend server (with hot reload)
 [group('dev')]
 server:
-  cd apps/server && bun run dev
+  uv run fastapi dev backend/main.py
 
-# Start the web frontend (with hot reload)
-[group('dev')]
-web:
-  cd apps/web && bun run dev
-
-# Start both server and web in parallel
+# Alias for server
 [group('dev')]
 dev:
-  #!/usr/bin/env sh
-  trap 'kill 0' EXIT
-  just server &
-  just web &
-  wait
+  just server
+
+# Start server on specific port
+[group('dev')]
+server-port PORT="8000":
+  uv run fastapi dev backend/main.py --port {{PORT}}
 
 # -----
-# Build
+# Production
 # -----
 
-# Build the server for production
-[group('build')]
-build-server:
-  cd apps/server && bun run build
+# Run server in production mode
+[group('prod')]
+start:
+  uv run fastapi run backend/main.py
 
-# Build the web app for production
-[group('build')]
-build-web:
-  cd apps/web && bun run build
-
-# Build everything
-[group('build')]
-build: build-server build-web
+# Run server in production mode on specific port
+[group('prod')]
+start-port PORT="8000":
+  uv run fastapi run backend/main.py --port {{PORT}}
 
 # -------
 # Testing
@@ -91,17 +91,38 @@ build: build-server build-web
 # Run all tests
 [group('test')]
 test:
-  bun test
+  uv run pytest -v
 
-# Run server tests only
+# Run tests with coverage
 [group('test')]
-test-server:
-  cd apps/server && bun test
+test-cov:
+  uv run pytest --cov=backend --cov-report=term-missing
 
-# Check TypeScript types
+# Run game simulation test (requires server running)
 [group('test')]
+test-game:
+  uv run python scripts/test_game.py
+
+# -------
+# Linting
+# -------
+
+# Lint and format code
+[group('lint')]
+lint:
+  uv run ruff check backend/ --fix
+  uv run ruff format backend/
+
+# Check only (no fixes)
+[group('lint')]
+lint-check:
+  uv run ruff check backend/
+  uv run ruff format backend/ --check
+
+# Type check with ty
+[group('lint')]
 typecheck:
-  bun run typecheck
+  uv run ty check backend/
 
 # -----------
 # API Testing
@@ -110,34 +131,40 @@ typecheck:
 # Check server health
 [group('api')]
 health:
-  curl -s http://localhost:3000/health | jq
+  curl -s http://localhost:8000/health | jq
 
 # Create a test room
 [group('api')]
-create-room name="Teacher":
-  curl -s -X POST http://localhost:3000/api/room/create \
+create-room name="Host":
+  curl -s -X POST http://localhost:8000/api/rooms \
     -H "Content-Type: application/json" \
-    -d '{"hostName":"{{name}}"}' | jq
+    -d '{"host_name":"{{name}}"}' | jq
 
-# Get room regions
+# Get room info
 [group('api')]
-regions room:
-  curl -s http://localhost:3000/api/room/{{room}}/regions | jq
+room CODE:
+  curl -s http://localhost:8000/api/rooms/{{CODE}} | jq
+
+# Get teams info
+[group('api')]
+teams CODE:
+  curl -s http://localhost:8000/api/rooms/{{CODE}}/teams | jq
 
 # -------
 # Cleanup
 # -------
 
-# Clean build artifacts and node_modules
+# Clean cache files
 [group('cleanup')]
 clean:
   #!/usr/bin/env sh
-  echo "Cleaning build artifacts..."
-  rm -rf node_modules apps/*/node_modules packages/*/node_modules
-  rm -rf apps/*/.svelte-kit apps/*/build apps/*/dist
+  echo "Cleaning cache files..."
+  find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+  find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+  find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
   echo "Cleanup complete."
 
 # Show project structure
 [group('cleanup')]
 tree:
-  tree -I 'node_modules|.git|.svelte-kit|dist|build' -L 3
+  tree -I '__pycache__|.git|.venv|.pytest_cache|.ruff_cache|monte-carlo-old' -L 3

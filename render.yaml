@@ -1,12 +1,13 @@
 services:
   - type: web
     name: kien-quoc-ky
-    runtime: node
-    buildCommand: bun install
-    startCommand: cd apps/server && bun run start
+    runtime: python
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run fastapi run backend/main.py --port $PORT
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 10000
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DEBUG
+        value: "false"
     plan: free
+    healthCheckPath: /health
