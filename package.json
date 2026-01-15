@@ -1,0 +1,17 @@
+{
+    "name": "kien-quoc-ky",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "packages/*",
+        "apps/*"
+    ],
+    "scripts": {
+        "dev:server": "bun run --cwd apps/server dev",
+        "dev:web": "bun run --cwd apps/web dev",
+        "build:server": "bun run --cwd apps/server build",
+        "build:web": "bun run --cwd apps/web build",
+        "dev": "bun run dev:server & bun run dev:web",
+        "typecheck": "tsc --build"
+    }
+}

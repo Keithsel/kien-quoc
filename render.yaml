@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kien-quoc-ky
+    runtime: node
+    buildCommand: bun install
+    startCommand: cd apps/server && bun run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    plan: free
