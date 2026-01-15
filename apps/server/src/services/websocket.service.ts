@@ -1,6 +1,7 @@
 import type { ClientMessage, ServerMessage, Role } from '@kien-quoc/shared'
 import { WS_PING_INTERVAL } from '@kien-quoc/shared'
-import { getRoom, getTeamByToken, getRoomByHostToken, getRoomState } from './room.service'
+import { getRoom, getTeamByToken, getRoomByHostToken, getRoomState, setRoomStatus } from './room.service'
+import { createGame, getGame, advancePhase, placeResource, submitTurn, pauseGame, resumeGame, endGame } from './game.service'
 
 // Elysia WebSocket type - simplified interface
 interface ElysiaWS {
@@ -180,29 +181,61 @@ function handleHostMessage(ws: ElysiaWS, message: ClientMessage) {
   const info = ws.data
   
   switch (message.type) {
-    case 'HOST_START_GAME':
+    case 'HOST_START_GAME': {
+      setRoomStatus(info.roomCode, 'playing')
+      const game = createGame(info.roomCode)
+      broadcastToRoom(info.roomCode, { type: 'GAME_STATE', payload: game })
       broadcastToRoom(info.roomCode, {
         type: 'PHASE_STARTED',
-        payload: { phase: 'event', timeLimit: 15 }
+        payload: { phase: 'event', timeLimit: 15, event: game.currentEvent ?? undefined }
       })
       break
+    }
     case 'HOST_PAUSE_GAME':
+      pauseGame(info.roomCode)
+      break
     case 'HOST_RESUME_GAME':
+      resumeGame(info.roomCode)
+      break
     case 'HOST_SKIP_PHASE':
-    case 'HOST_EXTEND_TIME':
+      advancePhase(info.roomCode)
+      break
+    case 'HOST_EXTEND_TIME': {
+      const game = getGame(info.roomCode)
+      if (game) {
+        game.phaseTimeLimit += message.payload.seconds
+        broadcastToRoom(info.roomCode, { type: 'PARTIAL_UPDATE', payload: { phaseTimeLimit: game.phaseTimeLimit } })
+      }
+      break
+    }
     case 'HOST_KICK_TEAM':
+      // Handled via HTTP API
+      break
     case 'HOST_END_GAME':
-      // Will be implemented with game engine
+      endGame(info.roomCode, 'host_ended')
       break
   }
 }
 
 function handlePlayerMessage(ws: ElysiaWS, message: ClientMessage) {
+  const info = ws.data
+  if (!info.teamId) return
+  
   switch (message.type) {
     case 'PLACE_RESOURCE':
+      if (placeResource(info.roomCode, info.teamId, message.payload.cellId, message.payload.amount)) {
+        const game = getGame(info.roomCode)
+        if (game) broadcastToRoom(info.roomCode, { type: 'GAME_STATE', payload: game })
+      }
+      break
     case 'REMOVE_RESOURCE':
+      if (placeResource(info.roomCode, info.teamId, message.payload.cellId, 0)) {
+        const game = getGame(info.roomCode)
+        if (game) broadcastToRoom(info.roomCode, { type: 'GAME_STATE', payload: game })
+      }
+      break
     case 'SUBMIT_TURN':
-      // Will be implemented with game engine
+      submitTurn(info.roomCode, info.teamId)
       break
   }
 }
