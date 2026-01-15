@@ -37,6 +37,7 @@ class ClientRole(str, Enum):
 
 class CreateRoomRequest(BaseModel):
     host_name: Annotated[str, Field(min_length=1, max_length=50)]
+    secret: str
 
 
 # === Response Models ===

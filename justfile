@@ -60,6 +60,18 @@ remove *PACKAGES:
 server:
   uv run fastapi dev backend/main.py
 
+# Run frontend dev server
+[group('dev')]
+frontend:
+    cd frontend && bun run dev --port 5173
+
+# Run both backend and frontend (for convenience)
+[group('dev')]
+dev-all:
+    @echo "Starting backend and frontend..."
+    @echo "Note: Use 'just backend' (server) and 'just frontend' in separate terminals if you need to see logs from both."
+    uv run fastapi dev backend/main.py --port 8000
+
 # Alias for server
 [group('dev')]
 dev:

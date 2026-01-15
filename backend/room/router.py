@@ -16,7 +16,55 @@ router = APIRouter(prefix='/api/rooms', tags=['rooms'])
     description='Creates a new game room with 5 teams. Deletes any existing room.',
 )
 async def create_room(request: CreateRoomRequest):
+    from backend.config.settings import settings
+
+    if request.secret != settings.HOST_SECRET:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid host secret')
     return await RoomService.create_room(request.host_name)
+
+
+@router.delete(
+    '',
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary='Delete current room',
+    description='Delete the current room (Host secret required)',
+)
+async def delete_room(secret: str):
+    from backend.config.settings import settings
+
+    if secret != settings.HOST_SECRET:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid host secret')
+
+    # We don't need room code or host token if we use HOST_SECRET to just wipe the singleton room
+    from backend.store.room_store import room_store
+
+    if room_store.exists():
+        room_store.delete()
+    return None
+
+
+@router.get(
+    '/current',
+    response_model=RoomInfoResponse | None,
+    summary='Get current room',
+    description='Get the current active room info if it exists',
+)
+async def get_current_room():
+    room = await RoomService.get_current_room()
+    if not room:
+        return None
+
+    return RoomInfoResponse(
+        room_code=room.code,
+        status=room.status,
+        host_name=room.host_name,
+        teams=[t.to_public() for t in room.teams],
+        created_at=room.created_at,
+    )
 
 
 @router.get(

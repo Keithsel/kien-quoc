@@ -66,6 +66,11 @@ class RoomService:
         return room
 
     @staticmethod
+    async def get_current_room() -> Room | None:
+        """Get the current active room if any."""
+        return room_store.get()
+
+    @staticmethod
     async def delete_room(room_code: str, host_token: str) -> bool:
         """Delete room (host only)."""
         room = room_store.get_by_code(room_code)
