@@ -6,7 +6,7 @@ services:
     startCommand: uv run fastapi run backend/main.py --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.14"
       - key: DEBUG
         value: "false"
     plan: free
