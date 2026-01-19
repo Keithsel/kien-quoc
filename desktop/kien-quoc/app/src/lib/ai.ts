@@ -52,12 +52,14 @@ export class RealisticAdaptiveAgent {
       cooperation: 0
     };
 
-    // Check survival mode
+    // Check survival mode (reduced sensitivity)
     const minIndex = Math.min(...Object.values(nationalIndices));
-    if (minIndex <= 5) {
+    if (minIndex <= 3) {
+      // Was 5 - now only triggers at critical levels
       this.survivalMode = true;
-      this.projectPriority = Math.min(0.6, this.projectPriority + 0.1);
-    } else if (minIndex >= 8) {
+      this.projectPriority = Math.min(0.55, this.projectPriority + 0.05); // Reduced from +0.1
+    } else if (minIndex >= 6) {
+      // Was 8
       this.survivalMode = false;
       this.projectPriority = Math.max(0.25, this.projectPriority - 0.02);
     }
@@ -77,13 +79,13 @@ export class RealisticAdaptiveAgent {
       // Mid/late game: personality-based behavior
       switch (this.personality) {
         case 'aggressive':
-          // Gets MORE competitive as game progresses
-          this.currentTendency = Math.max(0.1, this.baseTendency - turn * 0.08);
-          // Sometimes hog competitive cells entirely
-          if (Math.random() < 0.4) {
-            projectPct = 0.2;
-            competitivePct = 0.65 + Math.random() * 0.15;
-            cooperativePct = 0;
+          // Gets MORE competitive as game progresses (but less extreme)
+          this.currentTendency = Math.max(0.2, this.baseTendency - turn * 0.05);
+          // Sometimes focus more on competitive (but not all-in)
+          if (Math.random() < 0.3) {
+            projectPct = 0.25;
+            competitivePct = 0.4 + Math.random() * 0.15;
+            cooperativePct = 0.2;
             break;
           }
           break;
@@ -130,18 +132,22 @@ export class RealisticAdaptiveAgent {
       }
     }
 
-    // Allocate resources
+    // Allocate resources (reduced competitive weight)
     allocation.project = Math.floor(resources * projectPct);
-    allocation.competitive = Math.floor(resources * competitivePct * 0.5);
-    allocation.synergy = Math.floor(resources * cooperativePct * 0.4);
-    allocation.shared = Math.floor(resources * cooperativePct * 0.3);
-    allocation.cooperation = Math.floor(resources * cooperativePct * 0.3);
+    allocation.competitive = Math.floor(resources * competitivePct * 0.35); // Reduced from 0.5
+    allocation.synergy = Math.floor(resources * cooperativePct * 0.35);
+    allocation.shared = Math.floor(resources * cooperativePct * 0.35);
+    allocation.cooperation = Math.floor(resources * cooperativePct * 0.15); // Reduced to prevent exploitation
 
-    // Handle remainder
+    // Handle remainder - distribute more evenly instead of all to competitive
     const total = Object.values(allocation).reduce((a, b) => a + b, 0);
     const diff = resources - total;
     if (diff > 0) {
-      allocation.competitive += diff;
+      // Distribute remainder to project and synergy instead of just competitive
+      const projectBonus = Math.floor(diff * 0.5);
+      const synergyBonus = diff - projectBonus;
+      allocation.project += projectBonus;
+      allocation.synergy += synergyBonus;
     } else if (diff < 0) {
       for (const key of ['shared', 'cooperation', 'synergy', 'competitive'] as const) {
         if (allocation[key] >= Math.abs(diff)) {

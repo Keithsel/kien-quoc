@@ -77,9 +77,9 @@ export function calculateCellScores(
     }
 
     case 'project': {
-      // Project cells don't give direct points (handled separately)
-      for (const [teamId] of entries) {
-        scores[teamId] = 0;
+      // Project cells give base points (x1.0) regardless of project success
+      for (const [teamId, res] of entries) {
+        scores[teamId] = res * multiplier;
       }
       break;
     }

@@ -44,7 +44,7 @@ export const CELL_MULTIPLIERS: Record<CellType, number> = {
   competitive: 1.5,
   synergy: 1.8,
   shared: 1.5,
-  cooperation: 2.5,
+  cooperation: 2.0,
   project: 1.0
 };
 
