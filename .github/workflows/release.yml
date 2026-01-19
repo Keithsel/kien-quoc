@@ -16,6 +16,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
+          - platform: macos-latest
+            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 60
@@ -66,9 +68,11 @@ jobs:
         with:
           name: kien-quoc-${{ matrix.target }}
           path: |
+            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
             desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
             desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
             desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
 
   release:
     needs: build

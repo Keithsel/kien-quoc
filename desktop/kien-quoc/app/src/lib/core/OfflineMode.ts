@@ -110,7 +110,7 @@ export class OfflineMode implements IGameMode {
       this.processResults();
       batchUpdate({
         currentPhase: 'result',
-        phaseEndTime: Date.now() + PHASE_DURATIONS.result * 1000
+        phaseEndTime: Date.now() + 24 * 60 * 60 * 1000 // 24 hours - no timeout in offline
       });
     } else if (offlineState.currentPhase === 'result') {
       // End of turn - move to next turn
@@ -120,7 +120,7 @@ export class OfflineMode implements IGameMode {
       const nextPhase = PHASE_ORDER[currentIndex + 1];
       batchUpdate({
         currentPhase: nextPhase,
-        phaseEndTime: Date.now() + PHASE_DURATIONS[nextPhase] * 1000
+        phaseEndTime: Date.now() + 24 * 60 * 60 * 1000 // 24 hours - no timeout in offline
       });
 
       // Run AI turns when action phase starts
@@ -143,7 +143,7 @@ export class OfflineMode implements IGameMode {
     } else if (offlineState.status === 'paused') {
       batchUpdate({
         status: 'playing',
-        phaseEndTime: Date.now() + PHASE_DURATIONS[offlineState.currentPhase] * 1000
+        phaseEndTime: Date.now() + 24 * 60 * 60 * 1000 // 24 hours - no timeout in offline
       });
     }
     this.notifySubscribers();
@@ -216,7 +216,7 @@ export class OfflineMode implements IGameMode {
       status: saved.state.status,
       currentTurn: saved.state.currentTurn,
       currentPhase: saved.state.currentPhase,
-      phaseEndTime: Date.now() + PHASE_DURATIONS[saved.state.currentPhase] * 1000,
+      phaseEndTime: Date.now() + 24 * 60 * 60 * 1000, // 24 hours - no timeout in offline
       nationalIndices: saved.state.nationalIndices,
       activeTeamCount: saved.state.activeTeamCount,
       currentEvent: saved.state.currentEvent,
@@ -257,7 +257,7 @@ export class OfflineMode implements IGameMode {
       status: 'playing',
       currentTurn: 1,
       currentPhase: 'event',
-      phaseEndTime: Date.now() + PHASE_DURATIONS.event * 1000,
+      phaseEndTime: Date.now() + 24 * 60 * 60 * 1000, // 24 hours - no timeout in offline
       currentEvent: event
     });
 
@@ -384,7 +384,7 @@ export class OfflineMode implements IGameMode {
     batchUpdate({
       currentTurn: nextTurn,
       currentPhase: 'event',
-      phaseEndTime: Date.now() + PHASE_DURATIONS.event * 1000,
+      phaseEndTime: Date.now() + 24 * 60 * 60 * 1000, // 24 hours - no timeout in offline
       currentEvent: event,
       project: { totalRP: 0, teamCount: 0, success: null }
     });

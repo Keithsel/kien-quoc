@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "kien-quoc",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "identifier": "com.kienquoc.game",
   "build": {
     "frontendDist": "../.output/public",
@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "Kiến Quốc Ký",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
+        "width": 1920,
+        "height": 1080,
+        "minWidth": 1280,
+        "minHeight": 720,
         "resizable": true,
         "fullscreen": false
       }
