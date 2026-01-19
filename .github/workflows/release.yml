@@ -8,7 +8,16 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
     timeout-minutes: 60
 
     steps:
@@ -18,7 +27,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -44,20 +59,23 @@ jobs:
           VITE_TEST_MODE: "false"
         with:
           projectPath: desktop/kien-quoc/app
-          args: --target x86_64-pc-windows-msvc
+          args: --target ${{ matrix.target }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kien-quoc-windows
+          name: kien-quoc-${{ matrix.target }}
           path: |
-            desktop/kien-quoc/app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.exe
-            desktop/kien-quoc/app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.msi
+            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
