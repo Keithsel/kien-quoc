@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Base styles that don't conflict with Tailwind */
+:root {
+  --background: 214 219 220;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 0 0 0;
+  }
+}
+
+/* Only set background, let Tailwind handle text colors */
+body {
+  background: rgb(var(--background));
+}
+
+/* Ensure inputs have proper text color */
+input, textarea, select {
+  color: inherit;
+}
+

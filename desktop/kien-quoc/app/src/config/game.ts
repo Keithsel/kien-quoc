@@ -1,0 +1,93 @@
+export const INDEX_NAMES = ['economy', 'society', 'culture', 'integration', 'environment', 'science'] as const;
+export type IndexName = (typeof INDEX_NAMES)[number];
+
+export const INDEX_LABELS: Record<IndexName, string> = {
+  economy: 'Kinh tế',
+  society: 'Xã hội',
+  culture: 'Văn hóa',
+  integration: 'Hội nhập',
+  environment: 'Môi trường',
+  science: 'Khoa học'
+};
+
+export const INITIAL_INDICES: Record<IndexName, number> = {
+  economy: 10,
+  society: 10,
+  culture: 10,
+  integration: 10,
+  environment: 10,
+  science: 10
+};
+
+export const MAINTENANCE_COST: Record<IndexName, number> = {
+  economy: 1,
+  society: 1,
+  culture: 1,
+  integration: 1,
+  environment: 1,
+  science: 1
+};
+
+export const PHASE_DURATIONS = {
+  event: 15,
+  action: 60,
+  resolution: 3,
+  result: 15
+} as const;
+
+export type PhaseName = keyof typeof PHASE_DURATIONS;
+
+export const CELL_TYPES = ['competitive', 'synergy', 'shared', 'cooperation', 'project'] as const;
+export type CellType = (typeof CELL_TYPES)[number];
+
+export const CELL_MULTIPLIERS: Record<CellType, number> = {
+  competitive: 1.5,
+  synergy: 1.8,
+  shared: 1.5,
+  cooperation: 2.5,
+  project: 1.0
+};
+
+export const RESOURCES_PER_TURN = 14;
+export const MAX_TEAMS = 5;
+export const MAX_TURNS = 8;
+
+import { createSignal } from 'solid-js';
+
+// Test mode signals
+const [testModeSignal, setTestModeSignal] = createSignal(import.meta.env.VITE_TEST_MODE === 'true');
+export const isTestMode = testModeSignal;
+
+const [singlePlayerSignal, setSinglePlayerSignal] = createSignal(false);
+export const isSinglePlayerMode = singlePlayerSignal;
+
+// Bot-only mode (exclusive with testMode and singlePlayerMode)
+const [botOnlySignal, setBotOnlySignal] = createSignal(false);
+const [botCountSignal, setBotCountSignal] = createSignal(5);
+export const isBotOnlyMode = botOnlySignal;
+export const getBotCount = botCountSignal;
+export const setBotCount = setBotCountSignal;
+
+// Exclusive toggle logic
+export function setTestMode(value: boolean) {
+  if (value && isBotOnlyMode()) return; // Can't enable if botOnly is on
+  setTestModeSignal(value);
+  if (value) setBotOnlySignal(false);
+}
+
+export function setSinglePlayerMode(value: boolean) {
+  if (value && isBotOnlyMode()) return; // Can't enable if botOnly is on
+  setSinglePlayerSignal(value);
+  if (value) setBotOnlySignal(false);
+}
+
+export function setBotOnlyMode(value: boolean) {
+  setBotOnlySignal(value);
+  if (value) {
+    setTestModeSignal(false);
+    setSinglePlayerSignal(false);
+  }
+}
+
+export const getMinTeams = () => (isTestMode() ? 2 : 3);
+export const getProjectMultiplier = () => (isTestMode() ? 0.3 : 1.0);

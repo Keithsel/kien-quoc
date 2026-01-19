@@ -1,24 +1,13 @@
 [project]
 name = "kien-quoc"
-version = "1.0.0"
-description = "Kiến Quốc Ký - Educational Board Game API"
+version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi[standard]>=0.115.0",
-    "pydantic-settings>=2.5.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-    "httpx>=0.28.0",
-    "ruff>=0.8.0",
-]
-
-[dependency-groups]
-dev = [
-    "ty>=0.0.12",
-    "websockets>=16.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "pandas>=2.3.3",
+    "scipy>=1.17.0",
+    "tqdm>=4.67.1",
 ]

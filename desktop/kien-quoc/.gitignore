@@ -1,0 +1,15 @@
+# Developer tools' files
+.lite_workspace.lua
+
+# Build outputs
+.output/
+.vinxi/
+
+# Tauri build artifacts
+app/src-tauri/target/
+
+# Logs
+*.log
+
+# Firebase
+.firebase/
