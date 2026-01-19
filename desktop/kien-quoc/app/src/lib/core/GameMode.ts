@@ -58,6 +58,19 @@ export interface GameOver {
   finalRanking: Array<{ regionId: RegionId; points: number }>;
 }
 
+export interface TurnHistoryEntry {
+  turn: number;
+  event: {
+    name: string;
+    year: number;
+    project: string;
+  };
+  allocations: Record<string, Record<string, number>>; // team -> cellId -> RP
+  indicesSnapshot: Record<string, number>; // Indices after turn resolution
+  projectSuccess: boolean;
+  teamPoints: Record<string, number>; // Points earned this turn
+}
+
 export interface ProjectState {
   totalRP: number;
   teamCount: number;
@@ -94,6 +107,9 @@ export interface GameStateDTO {
   // Results
   lastTurnResult?: TurnResult;
   gameOver?: GameOver;
+
+  // History (for export)
+  turnHistory?: TurnHistoryEntry[];
 }
 
 // ============================================================================

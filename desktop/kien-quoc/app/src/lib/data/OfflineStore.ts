@@ -50,7 +50,8 @@ function createInitialState(): GameStateDTO {
     },
     // Explicitly reset these to ensure clean state
     gameOver: undefined,
-    lastTurnResult: undefined
+    lastTurnResult: undefined,
+    turnHistory: []
   };
 }
 

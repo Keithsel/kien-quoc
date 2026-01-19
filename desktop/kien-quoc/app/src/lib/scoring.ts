@@ -1,4 +1,4 @@
-import { CELL_MULTIPLIERS } from '~/config/game';
+import { CELL_MULTIPLIERS, SYNERGY_SCALING, SYNERGY_BASE, SYNERGY_FREE_PARTICIPANTS } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 import type { Placements, NationalIndices, TurnResult } from './types';
@@ -47,7 +47,7 @@ export function calculateCellScores(
 
     case 'synergy': {
       // More participants = bonus
-      const synergyBonus = 1.0 + (numParticipants - 1) * 0.25;
+      const synergyBonus = SYNERGY_BASE + (numParticipants - SYNERGY_FREE_PARTICIPANTS) * SYNERGY_SCALING;
       for (const [teamId, res] of entries) {
         scores[teamId] = res * synergyBonus * multiplier;
       }

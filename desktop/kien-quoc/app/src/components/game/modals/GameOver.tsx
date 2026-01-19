@@ -1,9 +1,22 @@
 import { For, Show } from 'solid-js';
-import { Trophy, HeartCrack, RotateCcw, ArrowLeft, Building2, Waves, Trees, Wheat, Factory, Users } from 'lucide-solid';
+import {
+  Trophy,
+  HeartCrack,
+  RotateCcw,
+  ArrowLeft,
+  Building2,
+  Waves,
+  Trees,
+  Wheat,
+  Factory,
+  Users,
+  Download
+} from 'lucide-solid';
 import type { GameOver, Team } from '~/lib/types';
 import type { RegionId } from '~/config/regions';
 import { REGIONS } from '~/config/regions';
 import { INDEX_LABELS } from '~/config/game';
+import { downloadGameHistoryAsJSON } from '~/lib/firebase/export';
 
 // Region icons matching region selection page
 const regionIcons: Record<RegionId, any> = {
@@ -126,7 +139,7 @@ export default function GameOverModal(props: GameOverProps) {
         </div>
 
         {/* Actions */}
-        <div class="flex gap-3 justify-center">
+        <div class="flex gap-3 justify-center flex-wrap">
           <button
             onClick={handlePrimaryAction}
             class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors"
@@ -134,6 +147,15 @@ export default function GameOverModal(props: GameOverProps) {
             <PrimaryIcon />
             {primaryButtonLabel()}
           </button>
+          <Show when={!props.isOnline}>
+            <button
+              onClick={() => downloadGameHistoryAsJSON()}
+              class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors"
+            >
+              <Download class="w-4 h-4" />
+              Xuất lịch sử
+            </button>
+          </Show>
           <button
             onClick={props.onQuit}
             class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl flex items-center gap-2 transition-colors"

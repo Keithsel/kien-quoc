@@ -3,13 +3,32 @@
  * Allows host to export game data as JSON for analysis
  */
 
-import { onlineGame } from '~/lib/firebase/store';
+import { getGameFacade } from '~/lib/core/GameFacade';
+import {
+  CELL_MULTIPLIERS,
+  RESOURCES_PER_TURN,
+  INITIAL_INDICES,
+  MAX_TURNS,
+  MAINTENANCE_COST,
+  SYNERGY_SCALING,
+  SYNERGY_BASE,
+  SYNERGY_FREE_PARTICIPANTS
+} from '~/config/game';
 import type { TurnHistoryEntry } from '~/lib/firebase/types';
-import type { RegionId } from '~/config/regions';
 
 interface ExportedGameHistory {
   exportedAt: string;
-  gameId: string;
+  gameMode: 'online' | 'offline';
+  // Game balance config (for meta analysis)
+  gameConfig: {
+    cellMultipliers: Record<string, number>;
+    resourcesPerTurn: number;
+    maxTurns: number;
+    maintenanceCost: Record<string, number>;
+    initialIndices: Record<string, number>;
+    // Human-readable scoring formulas
+    scoringRules: Record<string, string>;
+  };
   meta: {
     totalTurns: number;
     status: string;
@@ -33,38 +52,74 @@ interface ExportedGameHistory {
 
 /**
  * Export the current game history as a structured object
+ * Works for both online and offline modes
  */
 export function exportGameHistory(): ExportedGameHistory | null {
-  const game = onlineGame();
-  if (!game) return null;
+  const facade = getGameFacade();
 
-  const teamsMap: ExportedGameHistory['teams'] = {};
-  for (const [regionId, team] of Object.entries(game.teams || {})) {
-    teamsMap[regionId] = {
-      name: team.name,
-      isAI: team.isAI,
-      totalPoints: team.points
+  try {
+    const state = facade.getState();
+    if (!state) {
+      console.warn('Export failed: getState() returned null');
+      return null;
+    }
+
+    // Debug log
+    console.log('Exporting game:', { mode: facade.getModeType(), turn: state.currentTurn, status: state.status });
+
+    const teams = facade.getAllTeams();
+    const teamsMap: ExportedGameHistory['teams'] = {};
+
+    for (const [regionId, team] of Object.entries(teams)) {
+      teamsMap[regionId] = {
+        name: team.name,
+        isAI: team.isAI || false,
+        totalPoints: team.points
+      };
+    }
+
+    // Build ranking from teams
+    const ranking = Object.entries(teams)
+      .filter(([_, t]) => t.ownerId !== null || t.isAI)
+      .sort((a, b) => b[1].points - a[1].points)
+      .map(([id, t]) => ({ regionId: id, points: t.points }));
+
+    return {
+      exportedAt: new Date().toISOString(),
+      gameMode: facade.isOnline() ? 'online' : 'offline',
+      gameConfig: {
+        cellMultipliers: CELL_MULTIPLIERS as Record<string, number>,
+        resourcesPerTurn: RESOURCES_PER_TURN,
+        maxTurns: MAX_TURNS,
+        maintenanceCost: MAINTENANCE_COST,
+        initialIndices: INITIAL_INDICES as Record<string, number>,
+        scoringRules: {
+          competitive: `Winner takes all: max(RP) x ${CELL_MULTIPLIERS.competitive}, others get 0. Ties split.`,
+          synergy: `All get: RP x ${CELL_MULTIPLIERS.synergy} x (${SYNERGY_BASE} + ${SYNERGY_SCALING} x (participants - ${SYNERGY_FREE_PARTICIPANTS}))`,
+          shared: `Each team: RP x ${CELL_MULTIPLIERS.shared}`,
+          cooperation: `If 2+ teams: RP x ${CELL_MULTIPLIERS.cooperation}. Solo = 0 points.`,
+          project: `RP x ${CELL_MULTIPLIERS.project} (base points) + bonus from project success`
+        }
+      },
+      meta: {
+        totalTurns: state.currentTurn,
+        status: state.status,
+        gameOver: state.gameOver
+          ? {
+              reason: state.gameOver.reason,
+              zeroIndex: state.gameOver.zeroIndex
+            }
+          : null
+      },
+      teams: teamsMap,
+      finalRanking: state.gameOver?.finalRanking || ranking,
+      finalIndices: state.nationalIndices || {},
+      turnHistory: (state as { turnHistory?: TurnHistoryEntry[] }).turnHistory || []
     };
+  } catch {
+    console.warn('Failed to export game history');
+    return null;
   }
-
-  return {
-    exportedAt: new Date().toISOString(),
-    gameId: 'online-game',
-    meta: {
-      totalTurns: game.currentTurn,
-      status: game.status,
-      gameOver: game.gameOver
-        ? {
-            reason: game.gameOver.reason,
-            zeroIndex: game.gameOver.zeroIndex
-          }
-        : null
-    },
-    teams: teamsMap,
-    finalRanking: game.gameOver?.finalRanking || [],
-    finalIndices: game.nationalIndices || {},
-    turnHistory: (game as { turnHistory?: TurnHistoryEntry[] }).turnHistory || []
-  };
 }
 
 /**

@@ -444,7 +444,8 @@ export class OnlineMode implements IGameMode {
       currentEvent: data.currentEvent,
       project: data.project,
       lastTurnResult: data.lastTurnResult ?? undefined,
-      gameOver: data.gameOver ?? undefined
+      gameOver: data.gameOver ?? undefined,
+      turnHistory: data.turnHistory ?? []
     };
   }
 
@@ -567,7 +568,8 @@ export class OnlineMode implements IGameMode {
           .sort((a, b) => (b[1] as FirebaseTeam).points - (a[1] as FirebaseTeam).points)
           .map(([regionId, t]) => ({
             regionId: regionId as RegionId,
-            points: (t as FirebaseTeam).points + (result.teamPoints[regionId as RegionId] || 0)
+            points:
+              Math.round(((t as FirebaseTeam).points + (result.teamPoints[regionId as RegionId] || 0)) * 100) / 100
           }));
         gameOver = { reason: 'index_zero', zeroIndex: key as IndexName, finalRanking: ranking };
         break;
@@ -584,7 +586,7 @@ export class OnlineMode implements IGameMode {
       }
 
       await update(ref(db!, `${GAME_PATH}/teams/${regionId}`), {
-        points: team.points + pointsEarned,
+        points: Math.round((team.points + pointsEarned) * 100) / 100,
         cumulativeAllocations: cumulative
       });
     }

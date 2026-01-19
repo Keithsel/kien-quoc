@@ -24,7 +24,7 @@ export class RealisticAdaptiveAgent {
     // Random tendency between 0.3 (competitive) and 0.7 (cooperative)
     this.baseTendency = 0.3 + Math.random() * 0.4;
     this.currentTendency = this.baseTendency;
-    this.projectPriority = 0.45;
+    this.projectPriority = 0.35;
     this.survivalMode = false;
 
     // Assign personality type randomly

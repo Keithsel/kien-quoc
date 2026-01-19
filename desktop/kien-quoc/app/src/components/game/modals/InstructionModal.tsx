@@ -17,7 +17,15 @@ import {
   Lightbulb,
   TriangleAlert
 } from 'lucide-solid';
-import { PHASE_DURATIONS, RESOURCES_PER_TURN, MAX_TURNS } from '~/config/game';
+import {
+  PHASE_DURATIONS,
+  RESOURCES_PER_TURN,
+  MAX_TURNS,
+  CELL_MULTIPLIERS,
+  SYNERGY_SCALING,
+  SYNERGY_BASE,
+  SYNERGY_FREE_PARTICIPANTS
+} from '~/config/game';
 
 interface InstructionModalProps {
   onClose: () => void;
@@ -43,37 +51,44 @@ const indexInfo = [
 const cellTypes = [
   {
     name: 'Dự án',
-    type: 'project',
+    type: 'project' as const,
     count: 1,
-    multi: 'x1.0',
+    multi: `x${CELL_MULTIPLIERS.project}`,
     color: 'bg-red-600',
-    desc: 'Đóng góp trực tiếp vào dự án quốc gia'
+    desc: 'Đóng góp vào dự án quốc gia + nhận điểm cơ bản'
   },
   {
     name: 'Cộng hưởng',
-    type: 'synergy',
+    type: 'synergy' as const,
     count: 3,
-    multi: 'x1.8',
+    multi: `x${CELL_MULTIPLIERS.synergy}+`,
     color: 'bg-indigo-500',
-    desc: 'Thưởng khi nhiều đội cùng đặt'
+    desc: 'Thưởng tăng theo số đội tham gia'
   },
   {
     name: 'Cạnh tranh',
-    type: 'competitive',
+    type: 'competitive' as const,
     count: 3,
-    multi: 'x1.5',
+    multi: `x${CELL_MULTIPLIERS.competitive}`,
     color: 'bg-rose-500',
-    desc: 'Chỉ người cao nhất được tính'
+    desc: 'Chỉ người cao nhất được điểm'
   },
   {
     name: 'Hợp tác',
-    type: 'cooperation',
+    type: 'cooperation' as const,
     count: 3,
-    multi: 'x2.5',
+    multi: `x${CELL_MULTIPLIERS.cooperation}`,
     color: 'bg-emerald-500',
-    desc: 'Thưởng cao nhất khi hợp lực'
+    desc: 'Cần 2+ đội, nếu không = 0 điểm'
   },
-  { name: 'Chia sẻ', type: 'shared', count: 3, multi: 'x1.5', color: 'bg-sky-500', desc: 'Chia đều cho tất cả' }
+  {
+    name: 'Chia sẻ',
+    type: 'shared' as const,
+    count: 3,
+    multi: `x${CELL_MULTIPLIERS.shared}`,
+    color: 'bg-sky-500',
+    desc: 'Mỗi đội nhận theo phần mình đặt'
+  }
 ];
 
 const phases = [

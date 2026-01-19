@@ -42,11 +42,17 @@ export type CellType = (typeof CELL_TYPES)[number];
 
 export const CELL_MULTIPLIERS: Record<CellType, number> = {
   competitive: 1.5,
-  synergy: 1.8,
+  synergy: 1.5,
   shared: 1.5,
   cooperation: 2.0,
   project: 1.0
 };
+
+// Synergy formula: SYNERGY_BASE + (participants - SYNERGY_FREE_PARTICIPANTS) * SYNERGY_SCALING
+// Example: 1.0 + (5 - 1) * 0.15 = 1.6x bonus for 5 teams
+export const SYNERGY_BASE = 1.0; // Baseline multiplier (1.0 = no bonus for solo)
+export const SYNERGY_FREE_PARTICIPANTS = 1; // Number of participants before bonus kicks in
+export const SYNERGY_SCALING = 0.15; // Bonus per additional participant
 
 export const RESOURCES_PER_TURN = 14;
 export const MAX_TEAMS = 5;

@@ -172,7 +172,8 @@ export class OfflineMode implements IGameMode {
         if (region.id !== params.playerRegion) {
           updateTeam(region.id, {
             ownerId: `ai-${region.id}`,
-            connected: true
+            connected: true,
+            isAI: true
           });
           aiAgents.set(region.id, new RealisticAdaptiveAgent(region.id));
         }
@@ -340,10 +341,10 @@ export class OfflineMode implements IGameMode {
     // Update indices
     setOfflineState('nationalIndices', finalIndices);
 
-    // Update team points
+    // Update team points (round to 2 decimal places)
     for (const [regionId, points] of Object.entries(result.teamPoints)) {
       const team = offlineState.teams[regionId as RegionId];
-      updateTeam(regionId as RegionId, { points: team.points + points });
+      updateTeam(regionId as RegionId, { points: Math.round((team.points + points) * 100) / 100 });
     }
 
     // Update project and result state
@@ -355,6 +356,22 @@ export class OfflineMode implements IGameMode {
         success: result.success
       }
     });
+
+    // Record turn history for export
+    const historyEntry = {
+      turn: offlineState.currentTurn,
+      event: {
+        name: offlineState.currentEvent?.name || '',
+        year: offlineState.currentEvent?.year || 0,
+        project: offlineState.currentEvent?.project || ''
+      },
+      allocations: placementsRecord as Record<string, Record<string, number>>,
+      indicesSnapshot: { ...finalIndices } as Record<string, number>,
+      projectSuccess: result.success,
+      teamPoints: result.teamPoints as Record<string, number>
+    };
+    const existingHistory = offlineState.turnHistory || [];
+    setOfflineState('turnHistory', [...existingHistory, historyEntry]);
   }
 
   private processEndOfTurn(): void {
