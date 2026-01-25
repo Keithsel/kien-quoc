@@ -39,6 +39,7 @@ export const PHASE_DURATIONS = {
 } as const;
 
 export type PhaseName = keyof typeof PHASE_DURATIONS;
+export const PHASE_ORDER: PhaseName[] = ['event', 'action', 'resolution', 'result'];
 
 export const CELL_TYPES = ['competitive', 'synergy', 'independent', 'cooperation', 'project'] as const;
 export type CellType = (typeof CELL_TYPES)[number];
@@ -59,6 +60,9 @@ export const SYNERGY_SCALING = 0.15; // Bonus per additional participant
 
 // Competitive cell: losers get this multiplier instead of 0
 export const COMPETITIVE_LOSER_MULTIPLIER = 0.5;
+
+// Region specialization: bonus multiplier for investing in specialized cells
+export const REGION_SPECIALIZATION_MULTIPLIER = 1.1;
 
 export const RESOURCES_PER_TURN = 14;
 export const MAX_TEAMS = 5;
@@ -103,3 +107,7 @@ export function setBotOnlyMode(value: boolean) {
 
 export const getMinTeams = () => (isTestMode() ? 2 : 3);
 export const getProjectMultiplier = () => (isTestMode() ? 0.3 : 1.0);
+
+export type GameStatus = 'lobby' | 'playing' | 'paused' | 'finished' | 'ended';
+export type GameMode = 'online' | 'offline';
+export type Role = 'player' | 'host' | 'spectator';

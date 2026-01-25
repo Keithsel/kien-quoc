@@ -9,7 +9,7 @@ import { Show, For } from 'solid-js';
 import { TrendingUp } from 'lucide-solid';
 import { Card, ProgressBar } from '~/components/ui';
 import { useGame } from '~/lib/game/context';
-import { RESOURCES_PER_TURN } from '~/config/constants';
+import { RESOURCES_PER_TURN } from '~/config/game';
 
 export interface ResourcePanelProps {
   /** Resources used this turn */

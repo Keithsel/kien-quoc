@@ -28,7 +28,7 @@ import {
   MAINTENANCE_COST,
   type PhaseName,
   type IndexName
-} from '~/config/constants';
+} from '~/config/game';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 import { db, ensureAuth, getCurrentUserId } from '~/lib/firebase/client';
 import { calculateTurnScores, applyProjectResult, updateIndicesFromCells } from '~/lib/scoring';
@@ -69,10 +69,13 @@ interface FirebaseGameData {
   pausedRemainingMs?: number;
   turnHistory?: Array<{
     turn: number;
+    activeTeams: RegionId[];
+    teamFormationSummary: string;
     event: { name: string; year: number; project: string };
     allocations: Record<string, Record<string, number>>;
     indicesSnapshot: Record<string, number>;
     projectSuccess: boolean;
+    projectRequirements: { minRP: number; minTeams: number };
     teamPoints: Record<string, number>;
   }>;
 }
@@ -497,25 +500,29 @@ export class OnlineMode implements IGameMode {
     const avgScore = activeTeams.reduce((sum, t) => sum + t.points, 0) / activeTeams.length;
 
     for (const [regionId, team] of aiTeams) {
-      let agent = aiAgents.get(regionId as RegionId);
-      if (!agent) {
-        agent = new RealisticAdaptiveAgent(regionId);
-        aiAgents.set(regionId as RegionId, agent);
+      try {
+        let agent = aiAgents.get(regionId as RegionId);
+        if (!agent) {
+          agent = new RealisticAdaptiveAgent(regionId);
+          aiAgents.set(regionId as RegionId, agent);
+        }
+
+        const event = TURN_EVENTS.find((e) => e.turn === data.currentTurn) || TURN_EVENTS[0];
+        const placements = agent.generatePlacements(
+          data.currentTurn,
+          team.points,
+          avgScore,
+          data.nationalIndices as NationalIndices,
+          event
+        );
+
+        await update(ref(db!, `${GAME_PATH}/teams/${regionId}`), {
+          placements,
+          submitted: true
+        });
+      } catch (err) {
+        // Silently fail or log sparingly in production if needed, removing for now per user request
       }
-
-      const event = TURN_EVENTS.find((e) => e.turn === data.currentTurn) || TURN_EVENTS[0];
-      const placements = agent.generatePlacements(
-        data.currentTurn,
-        team.points,
-        avgScore,
-        data.nationalIndices as NationalIndices,
-        event
-      );
-
-      await update(ref(db!, `${GAME_PATH}/teams/${regionId}`), {
-        placements,
-        submitted: true
-      });
     }
   }
 
@@ -614,6 +621,10 @@ export class OnlineMode implements IGameMode {
     // Build turn history entry for export
     const historyEntry = {
       turn: data.currentTurn,
+      activeTeams: Object.entries(data.teams)
+        .filter(([, t]) => (t.ownerId && t.connected) || t.isAI)
+        .map(([id]) => id as RegionId),
+      teamFormationSummary: `${Object.values(data.teams).filter((t) => (t.ownerId && t.connected) || t.isAI).length} teams (${Object.values(data.teams).filter((t) => t.ownerId && t.connected && !t.isAI).length} Human, ${Object.values(data.teams).filter((t) => t.isAI).length} AI)`,
       event: {
         name: data.currentEvent?.name || '',
         year: data.currentEvent?.year || 0,
@@ -622,6 +633,10 @@ export class OnlineMode implements IGameMode {
       allocations: allPlacements as Record<string, Record<string, number>>,
       indicesSnapshot: finalIndices,
       projectSuccess: result.success,
+      projectRequirements: {
+        minRP: data.currentEvent?.minTotal || 0,
+        minTeams: data.currentEvent?.minTeams || 0
+      },
       teamPoints: result.teamPoints
     };
 

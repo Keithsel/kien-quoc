@@ -16,7 +16,7 @@ import {
   INITIAL_INDICES,
   MAINTENANCE_COST,
   type PhaseName
-} from '~/config/constants';
+} from '~/config/game';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 
 import {
@@ -360,6 +360,10 @@ export class OfflineMode implements IGameMode {
     // Record turn history for export
     const historyEntry = {
       turn: offlineState.currentTurn,
+      activeTeams: Object.entries(offlineState.teams)
+        .filter(([, t]) => t.ownerId !== null)
+        .map(([id]) => id as RegionId),
+      teamFormationSummary: `${Object.values(offlineState.teams).filter((t) => t.ownerId !== null).length} teams (${Object.values(offlineState.teams).filter((t) => t.ownerId === 'player').length} Human, ${Object.values(offlineState.teams).filter((t) => t.isAI).length} AI)`,
       event: {
         name: offlineState.currentEvent?.name || '',
         year: offlineState.currentEvent?.year || 0,
@@ -368,6 +372,10 @@ export class OfflineMode implements IGameMode {
       allocations: placementsRecord as Record<string, Record<string, number>>,
       indicesSnapshot: { ...finalIndices } as Record<string, number>,
       projectSuccess: result.success,
+      projectRequirements: {
+        minRP: offlineState.currentEvent?.minTotal || 0,
+        minTeams: offlineState.currentEvent?.minTeams || 0
+      },
       teamPoints: result.teamPoints as Record<string, number>
     };
     const existingHistory = offlineState.turnHistory || [];

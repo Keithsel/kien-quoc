@@ -7,7 +7,7 @@
  */
 
 import type { RegionId } from '~/config/regions';
-import type { IndexName, PhaseName, GameStatus, GameMode as GameModeType } from '~/config/constants';
+import type { IndexName, PhaseName, GameStatus, GameMode as GameModeType } from '~/config/game';
 
 // ============================================================================
 // DATA TYPES (shared between modes)
@@ -60,6 +60,8 @@ export interface GameOver {
 
 export interface TurnHistoryEntry {
   turn: number;
+  activeTeams: RegionId[];
+  teamFormationSummary: string; // e.g. "5 teams (2 Human, 3 AI)"
   event: {
     name: string;
     year: number;
@@ -68,6 +70,10 @@ export interface TurnHistoryEntry {
   allocations: Record<string, Record<string, number>>; // team -> cellId -> RP
   indicesSnapshot: Record<string, number>; // Indices after turn resolution
   projectSuccess: boolean;
+  projectRequirements: {
+    minRP: number;
+    minTeams: number;
+  };
   teamPoints: Record<string, number>; // Points earned this turn
 }
 

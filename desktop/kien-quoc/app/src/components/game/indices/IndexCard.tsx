@@ -8,8 +8,8 @@
 import { Show } from 'solid-js';
 import { Coins, Users, BookOpen, Globe, Leaf, Lightbulb, TrendingUp, TrendingDown } from 'lucide-solid';
 import { ProgressBar } from '~/components/ui';
-import type { IndexName } from '~/config/constants';
-import { INDEX_LABELS } from '~/config/constants';
+import type { IndexName } from '~/config/game';
+import { INDEX_LABELS } from '~/config/game';
 
 // Icon mapping
 const indexIcons: Record<IndexName, typeof Coins> = {

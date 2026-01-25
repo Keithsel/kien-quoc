@@ -10,7 +10,7 @@ import { TriangleAlert } from 'lucide-solid';
 import { Card } from '~/components/ui';
 import IndexCard from './IndexCard';
 import { useGame } from '~/lib/game/context';
-import { INDEX_NAMES, type IndexName } from '~/config/constants';
+import { INDEX_NAMES, type IndexName } from '~/config/game';
 
 export interface IndexListProps {
   /** Optional title override */

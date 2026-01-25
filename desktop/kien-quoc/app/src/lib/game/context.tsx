@@ -19,7 +19,7 @@ import {
   type NationalIndices
 } from '~/lib/core';
 import type { RegionId } from '~/config/regions';
-import type { PhaseName, GameMode as GameModeType } from '~/config/constants';
+import type { PhaseName, GameMode as GameModeType } from '~/config/game';
 import { PROJECT_CELLS } from '~/config/board';
 
 export type GameRole = 'player' | 'host' | 'spectator';

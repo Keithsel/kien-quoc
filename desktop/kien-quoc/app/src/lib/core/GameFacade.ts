@@ -8,7 +8,7 @@
 import { createSignal, createEffect, onCleanup } from 'solid-js';
 import type { IGameMode, GameStateDTO, GameInitParams, Team, Placements } from './GameMode';
 import type { RegionId } from '~/config/regions';
-import type { GameMode as GameModeType } from '~/config/constants';
+import type { GameMode as GameModeType } from '~/config/game';
 import { OfflineMode, getOfflineMode, resetOfflineMode } from './OfflineMode';
 import { OnlineMode, getOnlineMode, resetOnlineMode } from './OnlineMode';
 
