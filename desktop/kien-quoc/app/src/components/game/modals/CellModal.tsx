@@ -1,6 +1,6 @@
 import { Show, For } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { Plus, Minus, Info } from 'lucide-solid';
+import { Plus, Minus, Info, ChevronsLeft, ChevronsRight } from 'lucide-solid';
 import type { BoardCell } from '~/config/board';
 import { INDEX_LABELS } from '~/config/game';
 import { cellEffects, cellTypeLabels } from '~/components/game/play/shared/labels';
@@ -59,25 +59,55 @@ export default function CellModal(props: CellModalProps) {
         </Show>
 
         {/* Allocation controls */}
-        <div class="flex items-center justify-center gap-6 mb-6 py-4">
+        <div class="flex items-center justify-center gap-4 mb-6 py-4">
+          {/* Remove All */}
+          <div class="relative group">
+            <button
+              class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-50 transition-all"
+              onClick={() => props.onUpdate(-props.placement)}
+              disabled={props.placement <= 0}
+            >
+              <ChevronsLeft class="w-5 h-5" />
+            </button>
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+              Bỏ hết
+            </div>
+          </div>
+
           <button
-            class="w-14 h-14 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-3xl font-bold text-red-600 disabled:opacity-50 transition-all"
+            class="w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-2xl font-bold text-red-600 disabled:opacity-50 transition-all"
             onClick={() => props.onUpdate(-1)}
             disabled={props.placement <= 0}
           >
-            <Minus class="w-6 h-6" />
+            <Minus class="w-5 h-5" />
           </button>
-          <div class="text-center min-w-[100px]">
-            <div class="text-6xl font-bold text-red-600">{props.placement}</div>
-            <div class="text-sm text-gray-500 font-medium">RP phân bố</div>
+
+          <div class="text-center min-w-[80px]">
+            <div class="text-5xl font-bold text-red-600 leading-none">{props.placement}</div>
+            <div class="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">RP phân bố</div>
           </div>
+
           <button
-            class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-3xl font-bold text-white disabled:opacity-50 transition-all"
+            class="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-2xl font-bold text-white disabled:opacity-50 transition-all shadow-sm"
             onClick={() => props.onUpdate(1)}
             disabled={props.remainingResources <= 0}
           >
-            <Plus class="w-6 h-6" />
+            <Plus class="w-5 h-5" />
           </button>
+
+          {/* Allocate All */}
+          <div class="relative group">
+            <button
+              class="w-10 h-10 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-600 disabled:opacity-50 transition-all"
+              onClick={() => props.onUpdate(props.remainingResources)}
+              disabled={props.remainingResources <= 0}
+            >
+              <ChevronsRight class="w-5 h-5" />
+            </button>
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+              Dùng hết
+            </div>
+          </div>
         </div>
 
         {/* Action buttons */}

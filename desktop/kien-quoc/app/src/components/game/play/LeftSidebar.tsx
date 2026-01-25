@@ -15,6 +15,7 @@ interface LeftSidebarProps {
   remainingResources: number;
   onSubmit: () => void;
   onCancelSubmission: () => void;
+  onClearAll: () => void;
   timerExpired?: boolean;
 }
 
@@ -52,10 +53,22 @@ export default function LeftSidebar(props: LeftSidebarProps) {
     <div class="col-span-2 flex flex-col gap-3">
       {/* Resource Panel - different for players vs spectators */}
       <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-4">
-        <h3 class="font-bold text-gray-700 text-sm mb-3 flex items-center gap-2">
-          <TrendingUp class="w-4 h-4 text-red-600" />
-          {game.canPlay() ? 'Tài nguyên' : 'Đội chơi'}
-        </h3>
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-gray-700 text-sm flex items-center gap-2">
+            <TrendingUp class="w-4 h-4 text-red-600" />
+            {game.canPlay() ? 'Tài nguyên' : 'Đội chơi'}
+          </h3>
+
+          {/* Cancel all allocation button */}
+          <Show when={game.canPlay() && isActionPhase() && !game.myTeamSubmitted() && props.usedResources > 0}>
+            <button
+              onClick={props.onClearAll}
+              class="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-1 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
+            >
+              Hủy phân bố
+            </button>
+          </Show>
+        </div>
 
         {/* Player view - show own resources */}
         <Show when={game.canPlay()}>

@@ -221,6 +221,7 @@ export default function PlayContainer() {
           remainingResources={placement.remaining()}
           onSubmit={handleSubmit}
           onCancelSubmission={handleCancelSubmission}
+          onClearAll={() => placement.reset()}
           timerExpired={timer.isExpired()}
         />
 
