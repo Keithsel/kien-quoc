@@ -1,5 +1,6 @@
 {
   "name": "example-with-tailwindcss",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vinxi dev",
