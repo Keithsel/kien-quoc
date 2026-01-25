@@ -24,7 +24,7 @@ import {
 import { useGame } from '~/lib/game/context';
 import { useTimer, usePhaseAnimations } from '~/lib/game/hooks';
 import { extendOnlineTime, forceSubmitAllTeams } from '~/lib/firebase/game';
-import { downloadGameHistoryAsJSON } from '~/lib/firebase/export';
+import ExportButton from '~/components/ui/ExportButton';
 import { INDEX_NAMES, INDEX_LABELS, type IndexName } from '~/config/game';
 import EventPopup from '~/components/game/modals/EventPopup';
 import TeamPanel from './TeamPanel';
@@ -262,13 +262,7 @@ export default function HostView(props: HostViewProps) {
                 )}
               </div>
               {/* Export Button - show when game is finished */}
-              <button
-                onClick={() => downloadGameHistoryAsJSON()}
-                class="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow"
-              >
-                <Download class="w-4 h-4" />
-                Export
-              </button>
+              <ExportButton class="px-4 py-1.5 shadow" />
             </Show>
           </div>
         </div>
