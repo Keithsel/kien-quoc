@@ -3,7 +3,8 @@ import {
   SYNERGY_SCALING,
   SYNERGY_BASE,
   SYNERGY_FREE_PARTICIPANTS,
-  COMPETITIVE_LOSER_MULTIPLIER
+  COMPETITIVE_LOSER_MULTIPLIER,
+  INDEX_BOOST_DIVISOR
 } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
@@ -223,7 +224,7 @@ export function updateIndicesFromCells(
 
       // Each cell boosts its associated indices
       for (const index of cell.indices) {
-        indexBoost[index] = (indexBoost[index] || 0) + Math.floor(resources / 8);
+        indexBoost[index] = (indexBoost[index] || 0) + Math.floor(resources / INDEX_BOOST_DIVISOR);
       }
     }
   }

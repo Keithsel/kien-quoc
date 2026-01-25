@@ -21,16 +21,31 @@ export class RealisticAdaptiveAgent {
 
   constructor(teamId: string, seed?: number) {
     this.teamId = teamId;
-    // Random tendency between 0.3 (competitive) and 0.7 (cooperative)
-    this.baseTendency = 0.3 + Math.random() * 0.4;
-    this.currentTendency = this.baseTendency;
-    this.projectPriority = 0.35;
+    this.projectPriority = 0.3;
     this.survivalMode = false;
 
-    // Assign personality type randomly
+    // Assign personality type randomly (equal distribution)
     const roll = Math.random();
     this.personality =
       roll < 0.25 ? 'aggressive' : roll < 0.5 ? 'cooperative' : roll < 0.75 ? 'balanced' : 'opportunist';
+
+    // Set baseTendency based on personality (more polarized from the start)
+    // Lower tendency = more competitive, Higher tendency = more cooperative
+    switch (this.personality) {
+      case 'aggressive':
+        this.baseTendency = 0.15 + Math.random() * 0.15; // 0.15-0.30 (very competitive)
+        break;
+      case 'cooperative':
+        this.baseTendency = 0.7 + Math.random() * 0.2; // 0.70-0.90 (very cooperative)
+        break;
+      case 'balanced':
+        this.baseTendency = 0.4 + Math.random() * 0.2; // 0.40-0.60 (center)
+        break;
+      case 'opportunist':
+        this.baseTendency = 0.3 + Math.random() * 0.4; // 0.30-0.70 (will flip anyway)
+        break;
+    }
+    this.currentTendency = this.baseTendency;
   }
 
   /**
@@ -52,102 +67,99 @@ export class RealisticAdaptiveAgent {
       cooperation: 0
     };
 
-    // Check survival mode (reduced sensitivity)
+    // Check survival mode - trigger earlier and be more aggressive
     const minIndex = Math.min(...Object.values(nationalIndices));
-    if (minIndex <= 3) {
-      // Was 5 - now only triggers at critical levels
+    if (minIndex <= 2) {
+      // Critical mode - heavy project focus
       this.survivalMode = true;
-      this.projectPriority = Math.min(0.55, this.projectPriority + 0.05); // Reduced from +0.1
-    } else if (minIndex >= 6) {
-      // Was 8
+      this.projectPriority = 0.55; // Nerfed from 0.70
+    } else if (minIndex <= 5) {
+      // Survival mode - increased project priority
+      this.survivalMode = true;
+      this.projectPriority = Math.min(0.45, this.projectPriority + 0.08); // Nerfed from 0.60/0.10
+    } else if (minIndex >= 8) {
       this.survivalMode = false;
       this.projectPriority = Math.max(0.25, this.projectPriority - 0.02);
     }
 
-    let projectPct: number | undefined;
-    let competitivePct: number | undefined;
-    let cooperativePct: number | undefined;
+    let projectPct: number;
+    let competitivePct: number;
+    let cooperativePct: number;
 
-    if (turn <= 2) {
-      // Early game: more random
-      const noise = (Math.random() - 0.5) * 0.2;
-      projectPct = 0.3 + noise;
-      const remaining = 1.0 - projectPct;
-      competitivePct = remaining * (1 - this.currentTendency) * (0.8 + Math.random() * 0.4);
-      cooperativePct = remaining * this.currentTendency * (0.8 + Math.random() * 0.4);
-    } else {
-      // Mid/late game: personality-based behavior
-      switch (this.personality) {
-        case 'aggressive':
-          // Gets MORE competitive as game progresses (but less extreme)
-          this.currentTendency = Math.max(0.2, this.baseTendency - turn * 0.05);
-          // Sometimes focus more on competitive (but not all-in)
-          if (Math.random() < 0.3) {
-            projectPct = 0.25;
-            competitivePct = 0.4 + Math.random() * 0.15;
-            cooperativePct = 0.2;
-            break;
-          }
-          break;
-        case 'cooperative':
-          // Gets MORE cooperative as game progresses
-          this.currentTendency = Math.min(0.9, this.baseTendency + turn * 0.08);
-          // Sometimes focus entirely on cooperation
-          if (Math.random() < 0.4) {
-            projectPct = 0.35;
-            cooperativePct = 0.5 + Math.random() * 0.15;
-            competitivePct = 0;
-            break;
-          }
-          break;
-        case 'opportunist':
-          // Flip between extremes randomly
-          if (Math.random() < 0.5) {
-            this.currentTendency = 0.1 + Math.random() * 0.2;
-          } else {
-            this.currentTendency = 0.7 + Math.random() * 0.2;
-          }
-          break;
-        case 'balanced':
-        default:
-          // Adapt based on score difference
-          if (myScore < avgScore * 0.85) {
-            this.currentTendency = Math.min(0.9, this.currentTendency + 0.1);
-          } else if (myScore > avgScore * 1.15) {
-            this.currentTendency = Math.max(0.2, this.currentTendency - 0.05);
-          }
-          break;
-      }
+    // Personality-based behavior from Turn 1 (no more generic early game)
+    switch (this.personality) {
+      case 'aggressive':
+        // Heavy competitive focus, minimal cooperation
+        this.currentTendency = Math.max(0.1, this.baseTendency - turn * 0.02);
+        projectPct = 0.2 + Math.random() * 0.1; // 20-30% project
+        competitivePct = 0.45 + Math.random() * 0.15; // 45-60% competitive
+        cooperativePct = 1.0 - projectPct - competitivePct; // Rest to coop
+        break;
 
-      // Set defaults if not set by switch case
-      if (projectPct === undefined) {
+      case 'cooperative':
+        // Heavy synergy/cooperation focus, minimal competitive
+        this.currentTendency = Math.min(0.95, this.baseTendency + turn * 0.02);
+        projectPct = 0.3 + Math.random() * 0.1; // 30-40% project (more civic-minded)
+        cooperativePct = 0.45 + Math.random() * 0.15; // 45-60% cooperative
+        competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct); // Minimal competitive
+        break;
+
+      case 'opportunist':
+        // Flip between extremes each turn
+        if (Math.random() < 0.5) {
+          // Aggressive turn
+          this.currentTendency = 0.15 + Math.random() * 0.15;
+          projectPct = 0.15;
+          competitivePct = 0.5 + Math.random() * 0.2;
+          cooperativePct = 1.0 - projectPct - competitivePct;
+        } else {
+          // Cooperative turn
+          this.currentTendency = 0.75 + Math.random() * 0.15;
+          projectPct = 0.35;
+          cooperativePct = 0.5 + Math.random() * 0.15;
+          competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+        }
+        break;
+
+      case 'balanced':
+      default:
+        // Adapt based on score difference
+        if (myScore < avgScore * 0.85) {
+          // Behind: be more cooperative to catch up via synergy
+          this.currentTendency = Math.min(0.8, this.currentTendency + 0.15);
+        } else if (myScore > avgScore * 1.15) {
+          // Ahead: be more competitive to maintain lead
+          this.currentTendency = Math.max(0.25, this.currentTendency - 0.1);
+        }
         projectPct = this.projectPriority;
-      }
-      const remaining = 1.0 - projectPct;
-      if (competitivePct === undefined) {
+        const remaining = 1.0 - projectPct;
         competitivePct = remaining * (1 - this.currentTendency);
-      }
-      if (cooperativePct === undefined) {
         cooperativePct = remaining * this.currentTendency;
-      }
+        break;
     }
 
-    // Allocate resources (reduced competitive weight)
+    // Allocate resources with personality-influenced distribution
     allocation.project = Math.floor(resources * projectPct);
-    allocation.competitive = Math.floor(resources * competitivePct * 0.35); // Reduced from 0.5
-    allocation.synergy = Math.floor(resources * cooperativePct * 0.35);
-    allocation.independent = Math.floor(resources * cooperativePct * 0.35);
-    allocation.cooperation = Math.floor(resources * cooperativePct * 0.15); // Reduced to prevent exploitation
 
-    // Handle remainder - distribute more evenly instead of all to competitive
+    // Competitive pool
+    allocation.competitive = Math.floor(resources * competitivePct * 0.7); // 70% of competitive budget
+    allocation.independent = Math.floor(resources * competitivePct * 0.3); // 30% to independent (safe points)
+
+    // Cooperative pool
+    allocation.synergy = Math.floor(resources * cooperativePct * 0.5); // 50% synergy (scales with participants)
+    allocation.cooperation = Math.floor(resources * cooperativePct * 0.5); // 50% cooperation (high risk/reward)
+
+    // Handle remainder - distribute to personality's preferred type
     const total = Object.values(allocation).reduce((a, b) => a + b, 0);
     const diff = resources - total;
     if (diff > 0) {
-      // Distribute remainder to project and synergy instead of just competitive
-      const projectBonus = Math.floor(diff * 0.5);
-      const synergyBonus = diff - projectBonus;
-      allocation.project += projectBonus;
-      allocation.synergy += synergyBonus;
+      if (this.personality === 'aggressive') {
+        allocation.competitive += diff;
+      } else if (this.personality === 'cooperative') {
+        allocation.synergy += diff;
+      } else {
+        allocation.project += diff;
+      }
     } else if (diff < 0) {
       for (const key of ['independent', 'cooperation', 'synergy', 'competitive'] as const) {
         if (allocation[key] >= Math.abs(diff)) {

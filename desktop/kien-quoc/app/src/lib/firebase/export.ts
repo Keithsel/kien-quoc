@@ -125,23 +125,28 @@ export function exportGameHistory(): ExportedGameHistory | null {
 
 /**
  * Download game history as a JSON file
+ * Returns the filename if successful, null if failed
  */
-export function downloadGameHistoryAsJSON(filename?: string): void {
+export function downloadGameHistoryAsJSON(filename?: string): string | null {
   const history = exportGameHistory();
   if (!history) {
     console.warn('No game history to export');
-    return;
+    return null;
   }
 
   const json = JSON.stringify(history, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
+  const downloadFilename = filename || `kien-quoc-game-${Date.now()}.json`;
+
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename || `kien-quoc-game-${Date.now()}.json`;
+  a.download = downloadFilename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  return downloadFilename;
 }

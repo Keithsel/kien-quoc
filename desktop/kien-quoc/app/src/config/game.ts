@@ -28,6 +28,9 @@ export const MAINTENANCE_COST: Record<IndexName, number> = {
   science: 1
 };
 
+// How many RP needed on a cell to give +1 to its indices (lower = easier to maintain)
+export const INDEX_BOOST_DIVISOR = 7;
+
 export const PHASE_DURATIONS = {
   event: 15,
   action: 60,
