@@ -8,7 +8,6 @@ import { Show, For, createMemo } from 'solid-js';
 import { Target, Trophy, TrendingUp, Star, ChevronRight } from 'lucide-solid';
 import { useGame } from '~/lib/game/context';
 import { REGIONS } from '~/config/regions';
-import { regionIcons } from './shared/icons';
 
 interface RightSidebarProps {
   onProjectClick?: () => void;
@@ -88,7 +87,7 @@ export default function RightSidebar(props: RightSidebarProps) {
           <For each={leaderboard()}>
             {(team) => {
               const region = REGIONS.find((r) => r.id === team.id);
-              const Icon = region ? regionIcons[region.id] : null;
+              const Icon = region?.icon;
               const isMe = team.id === game.myTeamId();
               const showChange = game.currentPhase() === 'result' && team.pointsChange > 0;
 

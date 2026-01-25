@@ -13,7 +13,9 @@ import {
   SYNERGY_SCALING,
   SYNERGY_BASE,
   SYNERGY_FREE_PARTICIPANTS,
-  COMPETITIVE_LOSER_MULTIPLIER
+  COMPETITIVE_LOSER_MULTIPLIER,
+  REGION_SPECIALIZATION_MULTIPLIER,
+  INDEX_BOOST_DIVISOR
 } from '~/config/game';
 import type { TurnHistoryEntry } from '~/lib/firebase/types';
 
@@ -27,6 +29,8 @@ interface ExportedGameHistory {
     maxTurns: number;
     maintenanceCost: Record<string, number>;
     initialIndices: Record<string, number>;
+    regionSpecializationMultiplier: number;
+    indexBoostDivisor: number;
     // Human-readable scoring formulas
     scoringRules: Record<string, string>;
   };
@@ -85,6 +89,13 @@ export function exportGameHistory(): ExportedGameHistory | null {
       .sort((a, b) => b[1].points - a[1].points)
       .map(([id, t]) => ({ regionId: id, points: t.points }));
 
+    // Enhance turn history with real-time requirements
+    const enhancedTurnHistory = (state.turnHistory || []).map((turn) => {
+      // In a real scenario, we'd calculate this based on event + team count at that turn
+      // For now we just pass through what's in the state history
+      return turn;
+    });
+
     return {
       exportedAt: new Date().toISOString(),
       gameMode: facade.isOnline() ? 'online' : 'offline',
@@ -94,12 +105,16 @@ export function exportGameHistory(): ExportedGameHistory | null {
         maxTurns: MAX_TURNS,
         maintenanceCost: MAINTENANCE_COST,
         initialIndices: INITIAL_INDICES as Record<string, number>,
+        regionSpecializationMultiplier: REGION_SPECIALIZATION_MULTIPLIER,
+        indexBoostDivisor: INDEX_BOOST_DIVISOR,
         scoringRules: {
           competitive: `Winner: max(RP) x ${CELL_MULTIPLIERS.competitive}. Losers: RP x ${COMPETITIVE_LOSER_MULTIPLIER}. Ties split.`,
           synergy: `All get: RP x ${CELL_MULTIPLIERS.synergy} x (${SYNERGY_BASE} + ${SYNERGY_SCALING} x (participants - ${SYNERGY_FREE_PARTICIPANTS}))`,
           independent: `Each team: RP x ${CELL_MULTIPLIERS.independent}`,
           cooperation: `If 2+ teams: RP x ${CELL_MULTIPLIERS.cooperation}. Solo = 0 points.`,
-          project: `RP x ${CELL_MULTIPLIERS.project} (base points) + bonus from project success`
+          project: `RP x ${CELL_MULTIPLIERS.project} (base points) + bonus from project success`,
+          regionSpecialization: `If team invests in a cell matching their region's specialization, they get a x${REGION_SPECIALIZATION_MULTIPLIER} bonus.`,
+          indexBoosts: `Every ${INDEX_BOOST_DIVISOR} RP invested in a cell gives +1 to its associated national indices.`
         }
       },
       meta: {
@@ -115,7 +130,7 @@ export function exportGameHistory(): ExportedGameHistory | null {
       teams: teamsMap,
       finalRanking: state.gameOver?.finalRanking || ranking,
       finalIndices: state.nationalIndices || {},
-      turnHistory: (state as { turnHistory?: TurnHistoryEntry[] }).turnHistory || []
+      turnHistory: enhancedTurnHistory
     };
   } catch {
     console.warn('Failed to export game history');

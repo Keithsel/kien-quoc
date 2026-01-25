@@ -201,7 +201,8 @@ export async function reconnectTeam(): Promise<RegionId | null> {
 export async function leaveTeam(regionId: RegionId): Promise<void> {
   const teamRef = ref(db!, `${GAME_PATH}/teams/${regionId}`);
   await update(teamRef, {
-    connected: false
+    connected: false,
+    ownerId: null
   });
 }
 

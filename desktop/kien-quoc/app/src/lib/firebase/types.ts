@@ -92,6 +92,8 @@ export interface OnlineTurnResult {
  */
 export interface TurnHistoryEntry {
   turn: number;
+  activeTeams: RegionId[];
+  teamFormationSummary: string;
   event: {
     name: string;
     year: number;
@@ -100,6 +102,10 @@ export interface TurnHistoryEntry {
   allocations: Record<RegionId, Record<string, number>>; // team -> cellId -> RP
   indicesSnapshot: Record<IndexName, number>; // Indices after turn resolution
   projectSuccess: boolean;
+  projectRequirements: {
+    minRP: number;
+    minTeams: number;
+  };
   teamPoints: Record<RegionId, number>; // Points earned this turn
 }
 
