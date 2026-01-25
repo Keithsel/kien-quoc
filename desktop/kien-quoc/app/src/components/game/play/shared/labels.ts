@@ -29,7 +29,7 @@ export const cellColors: Record<CellType, string> = {
 };
 
 export const cellEffects: Record<CellType, string> = {
-  competitive: 'Đội phân bố nhiều nhất nhận toàn bộ điểm.',
+  competitive: 'Đội phân bố nhiều nhất nhận nhiều điểm nhất.',
   synergy: 'Càng nhiều đội tham gia, thưởng càng cao cho tất cả đội.',
   independent: 'Mỗi đội nhận điểm theo RP đã phân bố.',
   cooperation: 'Cần 2+ đội tham gia để nhận điểm.',

@@ -1,4 +1,10 @@
-import { CELL_MULTIPLIERS, SYNERGY_SCALING, SYNERGY_BASE, SYNERGY_FREE_PARTICIPANTS } from '~/config/game';
+import {
+  CELL_MULTIPLIERS,
+  SYNERGY_SCALING,
+  SYNERGY_BASE,
+  SYNERGY_FREE_PARTICIPANTS,
+  COMPETITIVE_LOSER_MULTIPLIER
+} from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 import type { Placements, NationalIndices, TurnResult } from './types';
@@ -32,14 +38,15 @@ export function calculateCellScores(
 
   switch (cell.type) {
     case 'competitive': {
-      // Winner takes all (split if tie)
+      // Winner takes all (split if tie), losers get consolation points
       const maxRes = Math.max(...entries.map(([, r]) => r));
       const winners = entries.filter(([, r]) => r === maxRes);
       for (const [teamId, res] of entries) {
         if (res === maxRes) {
           scores[teamId] = (res * multiplier) / winners.length;
         } else {
-          scores[teamId] = 0;
+          // Losers get consolation points
+          scores[teamId] = res * COMPETITIVE_LOSER_MULTIPLIER;
         }
       }
       break;

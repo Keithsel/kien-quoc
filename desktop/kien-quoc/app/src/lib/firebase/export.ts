@@ -12,7 +12,8 @@ import {
   MAINTENANCE_COST,
   SYNERGY_SCALING,
   SYNERGY_BASE,
-  SYNERGY_FREE_PARTICIPANTS
+  SYNERGY_FREE_PARTICIPANTS,
+  COMPETITIVE_LOSER_MULTIPLIER
 } from '~/config/game';
 import type { TurnHistoryEntry } from '~/lib/firebase/types';
 
@@ -94,7 +95,7 @@ export function exportGameHistory(): ExportedGameHistory | null {
         maintenanceCost: MAINTENANCE_COST,
         initialIndices: INITIAL_INDICES as Record<string, number>,
         scoringRules: {
-          competitive: `Winner takes all: max(RP) x ${CELL_MULTIPLIERS.competitive}, others get 0. Ties split.`,
+          competitive: `Winner: max(RP) x ${CELL_MULTIPLIERS.competitive}. Losers: RP x ${COMPETITIVE_LOSER_MULTIPLIER}. Ties split.`,
           synergy: `All get: RP x ${CELL_MULTIPLIERS.synergy} x (${SYNERGY_BASE} + ${SYNERGY_SCALING} x (participants - ${SYNERGY_FREE_PARTICIPANTS}))`,
           independent: `Each team: RP x ${CELL_MULTIPLIERS.independent}`,
           cooperation: `If 2+ teams: RP x ${CELL_MULTIPLIERS.cooperation}. Solo = 0 points.`,

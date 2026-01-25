@@ -54,6 +54,9 @@ export const SYNERGY_BASE = 1.0; // Baseline multiplier (1.0 = no bonus for solo
 export const SYNERGY_FREE_PARTICIPANTS = 1; // Number of participants before bonus kicks in
 export const SYNERGY_SCALING = 0.15; // Bonus per additional participant
 
+// Competitive cell: losers get this multiplier instead of 0
+export const COMPETITIVE_LOSER_MULTIPLIER = 0.5;
+
 export const RESOURCES_PER_TURN = 14;
 export const MAX_TEAMS = 5;
 export const MAX_TURNS = 8;
