@@ -2,6 +2,7 @@ import { RESOURCES_PER_TURN, type CellType } from '~/config/game';
 import { getCellsByType, PROJECT_CELLS } from '~/config/board';
 import type { NationalIndices, Placements } from './types';
 import type { TurnEvent } from '~/config/events';
+import { REGION_MAP, type RegionId } from '~/config/regions';
 
 interface AllocationByType {
   project: number;
@@ -174,15 +175,15 @@ export class RealisticAdaptiveAgent {
 
   /**
    * Distribute allocation to cells. AI focuses on fewer cells to maximize impact.
+   * Now prioritizes cells specialized by the region.
    */
   distributeToCells(allocation: AllocationByType): Placements {
     const placements: Placements = {};
+    const region = REGION_MAP[this.teamId as RegionId];
 
     // Project cells - focus on one project cell
     if (allocation.project > 0) {
-      const projectCells = PROJECT_CELLS;
-      // Pick one favorite project cell instead of spreading
-      const focusCell = shuffleArray(projectCells)[0];
+      const focusCell = shuffleArray(PROJECT_CELLS)[0];
       placements[focusCell.id] = allocation.project;
     }
 
@@ -190,17 +191,20 @@ export class RealisticAdaptiveAgent {
     const distributeToType = (type: CellType, amount: number) => {
       if (amount <= 0) return;
       const cells = getCellsByType(type);
-      const shuffled = shuffleArray(cells);
 
-      // 70% chance focus on 1 cell, 30% chance split between 2
-      const numCells = Math.random() < 0.7 ? 1 : Math.min(2, cells.length);
-      const chosen = shuffled.slice(0, numCells);
+      // Separate cells into specialized and non-specialized
+      const specialized = cells.filter((c) => region?.specializedIndices.some((idx) => c.indices.includes(idx)));
+      const others = cells.filter((c) => !specialized.includes(c));
+
+      // 60% chance to pick from specialized list if it exists
+      const pool = specialized.length > 0 && Math.random() < 0.6 ? shuffleArray(specialized) : shuffleArray(cells);
+
+      const numCells = Math.random() < 0.7 ? 1 : Math.min(2, pool.length);
+      const chosen = pool.slice(0, numCells);
 
       if (numCells === 1) {
-        // Put all resources on one cell
         placements[chosen[0].id] = (placements[chosen[0].id] || 0) + amount;
       } else {
-        // Split unevenly (primary gets more)
         const primary = Math.ceil(amount * 0.7);
         const secondary = amount - primary;
         placements[chosen[0].id] = (placements[chosen[0].id] || 0) + primary;

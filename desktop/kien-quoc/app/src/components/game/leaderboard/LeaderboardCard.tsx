@@ -10,7 +10,6 @@ import { Trophy, TrendingUp } from 'lucide-solid';
 import { Card, RankBadge } from '~/components/ui';
 import { useGame } from '~/lib/game/context';
 import { REGIONS, type RegionId } from '~/config/regions';
-import { regionIcons } from '~/components/game/play/shared/icons';
 
 export interface LeaderboardCardProps {
   /** Optional title */
@@ -48,7 +47,7 @@ export default function LeaderboardCard(props: LeaderboardCardProps) {
         <For each={leaderboard()}>
           {(team) => {
             const region = REGIONS.find((r) => r.id === team.id);
-            const Icon = region ? regionIcons[region.id] : null;
+            const Icon = region?.icon;
             const isMe = team.id === game.myTeamId();
             const showChange = game.currentPhase() === 'result' && team.pointsChange > 0;
 

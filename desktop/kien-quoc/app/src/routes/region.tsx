@@ -4,17 +4,9 @@
  */
 import { createSignal, For, Show, onMount } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
-import { ArrowLeft, MapPin, Play, Building2, Waves, Trees, Wheat, Factory, RotateCcw } from 'lucide-solid';
+import { ArrowLeft, MapPin, Play, RotateCcw } from 'lucide-solid';
 import { REGIONS, type RegionId } from '~/config/regions';
 import { getGameFacade } from '~/lib/core';
-
-const regionIcons: Record<RegionId, typeof Building2> = {
-  'thu-do': Building2,
-  'duyen-hai': Waves,
-  'tay-nguyen': Trees,
-  'dong-bang': Wheat,
-  'mien-dong': Factory
-};
 
 export default function RegionSelection() {
   const navigate = useNavigate();
@@ -101,13 +93,13 @@ export default function RegionSelection() {
         </div>
         <p class="text-gray-600 mb-8 text-lg">Bạn sẽ đại diện cho vùng nào?</p>
 
-        <div class="space-y-3 mb-8">
+        <div class="space-y-4 mb-8">
           <For each={REGIONS}>
             {(region) => {
-              const IconComponent = regionIcons[region.id];
+              const IconComponent = region.icon;
               return (
                 <button
-                  class={`w-full p-5 rounded-xl border-2 transition-all flex items-center gap-4
+                  class={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4
                     ${
                       selectedRegion() === region.id
                         ? 'border-red-500 bg-red-50 shadow-lg scale-[1.02]'
@@ -115,12 +107,17 @@ export default function RegionSelection() {
                     }`}
                   onClick={() => setSelectedRegion(region.id)}
                 >
-                  <div class={`w-14 h-14 rounded-xl ${region.colorClass} flex items-center justify-center shadow-md`}>
+                  <div
+                    class={`w-14 h-14 rounded-xl ${region.colorClass} flex items-center justify-center shadow-md shrink-0`}
+                  >
                     <IconComponent class="w-7 h-7 text-white" />
                   </div>
-                  <span class="font-bold text-gray-800 text-xl flex-1 text-left">{region.name}</span>
+                  <div class="flex-1 text-left min-w-0">
+                    <div class="font-bold text-gray-800 text-xl truncate">{region.name}</div>
+                    <div class="text-xs text-gray-500 font-medium">{region.description}</div>
+                  </div>
                   {selectedRegion() === region.id && (
-                    <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                    <div class="w-8 h-8 bg-red-500 shadow-sm rounded-full flex items-center justify-center shrink-0">
                       <span class="text-white text-lg font-bold">✓</span>
                     </div>
                   )}

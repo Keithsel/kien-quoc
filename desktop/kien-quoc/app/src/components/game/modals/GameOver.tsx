@@ -1,19 +1,10 @@
 import { For, Show } from 'solid-js';
-import { Trophy, HeartCrack, RotateCcw, ArrowLeft, Building2, Waves, Trees, Wheat, Factory, Users } from 'lucide-solid';
+import { Trophy, HeartCrack, RotateCcw, ArrowLeft, Users } from 'lucide-solid';
 import type { GameOver, Team } from '~/lib/types';
 import type { RegionId } from '~/config/regions';
 import { REGIONS } from '~/config/regions';
 import { INDEX_LABELS } from '~/config/game';
 import ExportButton from '~/components/ui/ExportButton';
-
-// Region icons matching region selection page
-const regionIcons: Record<RegionId, any> = {
-  'thu-do': Building2,
-  'duyen-hai': Waves,
-  'tay-nguyen': Trees,
-  'dong-bang': Wheat,
-  'mien-dong': Factory
-};
 
 interface GameOverProps {
   gameOver: GameOver;
@@ -108,12 +99,12 @@ export default function GameOverModal(props: GameOverProps) {
                       {i() + 1}
                     </span>
                     {(() => {
-                      const IconComponent = regionIcons[entry.regionId];
+                      const IconComponent = region?.icon;
                       return (
                         <div
                           class={`w-8 h-8 rounded-lg ${region?.colorClass || 'bg-gray-400'} flex items-center justify-center`}
                         >
-                          <IconComponent class="w-4 h-4 text-white" />
+                          {IconComponent && <IconComponent class="w-4 h-4 text-white" />}
                         </div>
                       );
                     })()}

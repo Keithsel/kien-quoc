@@ -1,3 +1,6 @@
+import { Building2, Waves, Trees, Wheat, Factory } from 'lucide-solid';
+import type { IndexName } from './game';
+
 export type RegionId = 'thu-do' | 'duyen-hai' | 'tay-nguyen' | 'dong-bang' | 'mien-dong';
 
 export interface Region {
@@ -5,21 +8,51 @@ export interface Region {
   name: string;
   description: string;
   colorClass: string; // Tailwind bg color class
-  icon: string; // Emoji as fallback
+  icon: any; // Lucide icon component
+  specializedIndices: IndexName[];
 }
 
 export const REGIONS: Region[] = [
-  { id: 'thu-do', name: 'Thủ đô', description: 'Trung tâm chính trị - văn hóa', colorClass: 'bg-red-600', icon: '🏛️' },
-  { id: 'duyen-hai', name: 'Duyên hải', description: 'Vùng biển và thương mại', colorClass: 'bg-blue-600', icon: '🌊' },
+  {
+    id: 'thu-do',
+    name: 'Thủ đô',
+    description: 'Ưu thế: Văn hóa',
+    colorClass: 'bg-red-600',
+    icon: Building2,
+    specializedIndices: ['culture']
+  },
+  {
+    id: 'duyen-hai',
+    name: 'Duyên hải',
+    description: 'Ưu thế: Hội nhập',
+    colorClass: 'bg-blue-600',
+    icon: Waves,
+    specializedIndices: ['integration']
+  },
   {
     id: 'tay-nguyen',
     name: 'Tây Nguyên',
-    description: 'Cao nguyên và nông nghiệp',
+    description: 'Ưu thế: Môi trường',
     colorClass: 'bg-green-600',
-    icon: '🌿'
+    icon: Trees,
+    specializedIndices: ['environment']
   },
-  { id: 'dong-bang', name: 'Đồng bằng', description: 'Lúa gạo và nông sản', colorClass: 'bg-amber-600', icon: '🌾' },
-  { id: 'mien-dong', name: 'Miền Đông', description: 'Công nghiệp và kinh tế', colorClass: 'bg-purple-600', icon: '🏭' }
+  {
+    id: 'dong-bang',
+    name: 'Đồng bằng',
+    description: 'Ưu thế: Xã hội',
+    colorClass: 'bg-amber-600',
+    icon: Wheat,
+    specializedIndices: ['society']
+  },
+  {
+    id: 'mien-dong',
+    name: 'Miền Đông',
+    description: 'Ưu thế: Kinh tế',
+    colorClass: 'bg-purple-600',
+    icon: Factory,
+    specializedIndices: ['economy']
+  }
 ];
 
 export const REGION_MAP = Object.fromEntries(REGIONS.map((r) => [r.id, r])) as Record<RegionId, Region>;

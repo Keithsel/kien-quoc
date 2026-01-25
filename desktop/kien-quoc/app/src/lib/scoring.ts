@@ -4,12 +4,14 @@ import {
   SYNERGY_BASE,
   SYNERGY_FREE_PARTICIPANTS,
   COMPETITIVE_LOSER_MULTIPLIER,
-  INDEX_BOOST_DIVISOR
+  INDEX_BOOST_DIVISOR,
+  REGION_SPECIALIZATION_MULTIPLIER
 } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 import type { Placements, NationalIndices, TurnResult } from './types';
 import type { RegionId } from '~/config/regions';
+import { REGION_MAP } from '~/config/regions';
 
 export function calculateCellScores(
   cellId: string,
@@ -37,6 +39,14 @@ export function calculateCellScores(
 
   const scores: Record<string, number> = {};
 
+  // Apply specialization bonus to each team's contribution if applicable
+  const applySpecialization = (teamId: RegionId, baseScore: number) => {
+    const region = REGION_MAP[teamId];
+    if (!region) return baseScore;
+    const isSpecialized = cell.indices.some((idx) => region.specializedIndices.includes(idx));
+    return isSpecialized ? baseScore * REGION_SPECIALIZATION_MULTIPLIER : baseScore;
+  };
+
   switch (cell.type) {
     case 'competitive': {
       // Winner takes all (split if tie), losers get consolation points
@@ -44,10 +54,12 @@ export function calculateCellScores(
       const winners = entries.filter(([, r]) => r === maxRes);
       for (const [teamId, res] of entries) {
         if (res === maxRes) {
-          scores[teamId] = (res * multiplier) / winners.length;
+          const baseScore = (res * multiplier) / winners.length;
+          scores[teamId] = applySpecialization(teamId, baseScore);
         } else {
           // Losers get consolation points
-          scores[teamId] = res * COMPETITIVE_LOSER_MULTIPLIER;
+          const baseScore = res * COMPETITIVE_LOSER_MULTIPLIER;
+          scores[teamId] = applySpecialization(teamId, baseScore);
         }
       }
       break;
@@ -57,7 +69,8 @@ export function calculateCellScores(
       // More participants = bonus
       const synergyBonus = SYNERGY_BASE + (numParticipants - SYNERGY_FREE_PARTICIPANTS) * SYNERGY_SCALING;
       for (const [teamId, res] of entries) {
-        scores[teamId] = res * synergyBonus * multiplier;
+        const baseScore = res * synergyBonus * multiplier;
+        scores[teamId] = applySpecialization(teamId, baseScore);
       }
       break;
     }
@@ -65,7 +78,8 @@ export function calculateCellScores(
     case 'independent': {
       // Simple multiplier
       for (const [teamId, res] of entries) {
-        scores[teamId] = res * multiplier;
+        const baseScore = res * multiplier;
+        scores[teamId] = applySpecialization(teamId, baseScore);
       }
       break;
     }
@@ -74,7 +88,8 @@ export function calculateCellScores(
       // Requires 2+ teams
       if (numParticipants >= 2) {
         for (const [teamId, res] of entries) {
-          scores[teamId] = res * multiplier;
+          const baseScore = res * multiplier;
+          scores[teamId] = applySpecialization(teamId, baseScore);
         }
       } else {
         for (const [teamId] of entries) {

@@ -11,7 +11,7 @@ import { REGIONS } from '~/config/regions';
 import { INDEX_LABELS } from '~/config/game';
 import { calculateCellScores } from '~/lib/scoring';
 import { getCellBackground } from '~/config/tile-backgrounds';
-import { cellTypeIcons, regionIcons } from './shared/icons';
+import { cellTypeIcons } from './shared/icons';
 import { cellTypeLabels, cellColors } from './shared/labels';
 
 interface BoardCellProps {
@@ -149,7 +149,7 @@ export default function BoardCell(props: BoardCellProps) {
                 <For each={teams}>
                   {(team, idx) => {
                     const region = REGIONS.find((r) => r.id === team.id);
-                    const RegionIcon = region ? regionIcons[region.id] : regionIcons['thu-do'];
+                    const RegionIcon = region?.icon || REGIONS[0].icon;
                     const investedRP = team.placements[props.cell.id] || 0;
                     const earnedPoints = (cellScores() as Record<string, number>)[team.id] || 0;
                     const isResultPhase = props.currentPhase === 'result';
