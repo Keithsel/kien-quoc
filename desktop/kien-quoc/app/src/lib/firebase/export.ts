@@ -96,7 +96,7 @@ export function exportGameHistory(): ExportedGameHistory | null {
         scoringRules: {
           competitive: `Winner takes all: max(RP) x ${CELL_MULTIPLIERS.competitive}, others get 0. Ties split.`,
           synergy: `All get: RP x ${CELL_MULTIPLIERS.synergy} x (${SYNERGY_BASE} + ${SYNERGY_SCALING} x (participants - ${SYNERGY_FREE_PARTICIPANTS}))`,
-          shared: `Each team: RP x ${CELL_MULTIPLIERS.shared}`,
+          independent: `Each team: RP x ${CELL_MULTIPLIERS.independent}`,
           cooperation: `If 2+ teams: RP x ${CELL_MULTIPLIERS.cooperation}. Solo = 0 points.`,
           project: `RP x ${CELL_MULTIPLIERS.project} (base points) + bonus from project success`
         }

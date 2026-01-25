@@ -17,7 +17,7 @@ import { cellTypeLabels } from '~/components/game/play/shared/labels';
 const CELL_BAR_COLORS: Record<CellType, string> = {
   project: 'bg-red-600',
   synergy: 'bg-indigo-500',
-  shared: 'bg-sky-500',
+  independent: 'bg-sky-500',
   cooperation: 'bg-emerald-500',
   competitive: 'bg-rose-500'
 };
@@ -34,7 +34,7 @@ function getAllocationsByType(placements: Record<string, number>): AllocationByT
     synergy: 0,
     competitive: 0,
     cooperation: 0,
-    shared: 0
+    independent: 0
   };
 
   for (const cell of BOARD_CELLS) {
@@ -47,7 +47,7 @@ function getAllocationsByType(placements: Record<string, number>): AllocationByT
   const total = Object.values(byType).reduce((s, v) => s + v, 0);
 
   // Fixed order: project first, competitive last (to separate similar red colors)
-  const typeOrder: CellType[] = ['project', 'synergy', 'cooperation', 'shared', 'competitive'];
+  const typeOrder: CellType[] = ['project', 'synergy', 'cooperation', 'independent', 'competitive'];
 
   return typeOrder
     .filter((type) => byType[type] > 0)

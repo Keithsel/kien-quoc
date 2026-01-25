@@ -55,13 +55,13 @@ export const PHASE_ORDER: PhaseName[] = ['event', 'action', 'resolution', 'resul
 // CELL CONFIGURATION
 // ============================================================================
 
-export const CELL_TYPES = ['competitive', 'synergy', 'shared', 'cooperation', 'project'] as const;
+export const CELL_TYPES = ['competitive', 'synergy', 'independent', 'cooperation', 'project'] as const;
 export type CellType = (typeof CELL_TYPES)[number];
 
 export const CELL_MULTIPLIERS: Record<CellType, number> = {
   competitive: 1.5,
   synergy: 1.8,
-  shared: 1.5,
+  independent: 1.5,
   cooperation: 2.5,
   project: 1.0
 };

@@ -26,6 +26,7 @@ import {
   SYNERGY_BASE,
   SYNERGY_FREE_PARTICIPANTS
 } from '~/config/game';
+import { cellTypeLabels, cellEffects } from '~/components/game/play/shared/labels';
 
 interface InstructionModalProps {
   onClose: () => void;
@@ -49,47 +50,16 @@ const indexInfo = [
 ];
 
 const cellTypes = [
-  {
-    name: 'Dự án',
-    type: 'project' as const,
-    count: 1,
-    multi: `x${CELL_MULTIPLIERS.project}`,
-    color: 'bg-red-600',
-    desc: 'Đóng góp vào dự án quốc gia + nhận điểm cơ bản'
-  },
-  {
-    name: 'Cộng hưởng',
-    type: 'synergy' as const,
-    count: 3,
-    multi: `x${CELL_MULTIPLIERS.synergy}+`,
-    color: 'bg-indigo-500',
-    desc: 'Thưởng tăng theo số đội tham gia'
-  },
-  {
-    name: 'Cạnh tranh',
-    type: 'competitive' as const,
-    count: 3,
-    multi: `x${CELL_MULTIPLIERS.competitive}`,
-    color: 'bg-rose-500',
-    desc: 'Chỉ người cao nhất được điểm'
-  },
-  {
-    name: 'Hợp tác',
-    type: 'cooperation' as const,
-    count: 3,
-    multi: `x${CELL_MULTIPLIERS.cooperation}`,
-    color: 'bg-emerald-500',
-    desc: 'Cần 2+ đội, nếu không = 0 điểm'
-  },
-  {
-    name: 'Chia sẻ',
-    type: 'shared' as const,
-    count: 3,
-    multi: `x${CELL_MULTIPLIERS.shared}`,
-    color: 'bg-sky-500',
-    desc: 'Mỗi đội nhận theo phần mình đặt'
-  }
-];
+  { type: 'project' as const, color: 'bg-red-600', count: 1, multi: `x${CELL_MULTIPLIERS.project}` },
+  { type: 'synergy' as const, color: 'bg-indigo-500', count: 3, multi: `x${CELL_MULTIPLIERS.synergy}+` },
+  { type: 'competitive' as const, color: 'bg-rose-500', count: 3, multi: `x${CELL_MULTIPLIERS.competitive}` },
+  { type: 'cooperation' as const, color: 'bg-emerald-500', count: 3, multi: `x${CELL_MULTIPLIERS.cooperation}` },
+  { type: 'independent' as const, color: 'bg-sky-500', count: 3, multi: `x${CELL_MULTIPLIERS.independent}` }
+].map((item) => ({
+  ...item,
+  name: cellTypeLabels[item.type],
+  desc: cellEffects[item.type]
+}));
 
 const phases = [
   {
@@ -259,7 +229,7 @@ export default function InstructionModal(props: InstructionModalProps) {
               </div>
               <div class="p-3 bg-blue-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
                 <Lightbulb class="w-4 h-4 text-blue-600" />
-                Đặt tài nguyên vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (bất kể dự án)
+                Phân bố tài nguyên vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (bất kể dự án)
               </div>
             </div>
           </Show>

@@ -15,7 +15,7 @@ export const phaseLabels: Record<PhaseName, string> = {
 export const cellTypeLabels: Record<CellType, string> = {
   competitive: 'Cạnh tranh',
   synergy: 'Cộng hưởng',
-  shared: 'Chia sẻ',
+  independent: 'Độc lập',
   cooperation: 'Hợp tác',
   project: 'Dự án'
 };
@@ -23,17 +23,17 @@ export const cellTypeLabels: Record<CellType, string> = {
 export const cellColors: Record<CellType, string> = {
   competitive: 'from-rose-500 to-rose-600',
   synergy: 'from-indigo-500 to-indigo-600',
-  shared: 'from-sky-500 to-sky-600',
+  independent: 'from-sky-500 to-sky-600',
   cooperation: 'from-emerald-500 to-emerald-600',
   project: 'from-red-600 to-red-700'
 };
 
 export const cellEffects: Record<CellType, string> = {
-  competitive: 'Đội phân bố nhiều tài nguyên nhất nhận TOÀN BỘ điểm. Các đội khác mất điểm.',
-  synergy: 'Tất cả các đội cùng phân bố đều nhận điểm. Phân bố càng nhiều, điểm càng cao.',
-  shared: 'Điểm được chia đều cho tất cả đội cùng phân bố, bất kể số lượng.',
-  cooperation: 'Cần tối thiểu 2 đội cùng phân bố. Tất cả đều nhận điểm bonus.',
-  project: 'Đóng góp vào Dự án Quốc gia. Cần đạt mốc yêu cầu để thành công.'
+  competitive: 'Đội phân bố nhiều nhất nhận toàn bộ điểm.',
+  synergy: 'Càng nhiều đội tham gia, thưởng càng cao cho tất cả đội.',
+  independent: 'Mỗi đội nhận điểm theo RP đã phân bố.',
+  cooperation: 'Cần 2+ đội tham gia để nhận điểm.',
+  project: 'Đóng góp vào Dự án Quốc gia. Nhận điểm cơ bản và thưởng thêm nếu thành công.'
 };
 
 export function getPhaseColor(phase: PhaseName): string {

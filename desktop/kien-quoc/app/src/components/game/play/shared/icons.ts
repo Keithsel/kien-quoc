@@ -1,14 +1,14 @@
 /**
  * Shared Icons for Game Components
  */
-import { Crown, Sparkles, Share2, Handshake, Star, Building2, Waves, Trees, Wheat, Factory } from 'lucide-solid';
+import { Crown, Sparkles, Zap, Handshake, Star, Building2, Waves, Trees, Wheat, Factory } from 'lucide-solid';
 import type { CellType } from '~/config/game';
 import type { RegionId } from '~/config/regions';
 
 export const cellTypeIcons: Record<CellType, typeof Crown> = {
   competitive: Crown,
   synergy: Sparkles,
-  shared: Share2,
+  independent: Zap,
   cooperation: Handshake,
   project: Star
 };

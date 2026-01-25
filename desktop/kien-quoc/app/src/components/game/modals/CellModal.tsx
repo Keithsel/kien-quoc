@@ -1,8 +1,10 @@
 import { Show, For } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { Plus, Minus, Info, Crown, Sparkles, Share2, Handshake, Star } from 'lucide-solid';
+import { Plus, Minus, Info } from 'lucide-solid';
 import type { BoardCell } from '~/config/board';
 import { INDEX_LABELS } from '~/config/game';
+import { cellEffects, cellTypeLabels } from '~/components/game/play/shared/labels';
+import { cellTypeIcons } from '~/components/game/play/shared/icons';
 
 interface CellModalProps {
   cell: BoardCell;
@@ -12,30 +14,6 @@ interface CellModalProps {
   onClose: () => void;
   onCancel?: () => void;
 }
-
-const cellTypeIcons = {
-  competitive: Crown,
-  synergy: Sparkles,
-  shared: Share2,
-  cooperation: Handshake,
-  project: Star
-};
-
-const cellTypeLabels: Record<string, string> = {
-  competitive: 'Cạnh tranh',
-  synergy: 'Cộng hưởng',
-  shared: 'Chia sẻ',
-  cooperation: 'Hợp tác',
-  project: 'Dự án'
-};
-
-const cellEffects: Record<string, string> = {
-  competitive: 'Đội phân bố nhiều nhất nhận TOÀN BỘ điểm.',
-  synergy: 'Tất cả đội đều nhận điểm theo lượng phân bố.',
-  shared: 'Điểm chia đều cho tất cả đội tham gia.',
-  cooperation: 'Cần 2+ đội. Tất cả nhận bonus.',
-  project: 'Đóng góp vào Dự án Quốc gia.'
-};
 
 export default function CellModal(props: CellModalProps) {
   return (

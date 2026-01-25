@@ -7,7 +7,7 @@ interface AllocationByType {
   project: number;
   competitive: number;
   synergy: number;
-  shared: number;
+  independent: number;
   cooperation: number;
 }
 
@@ -48,7 +48,7 @@ export class RealisticAdaptiveAgent {
       project: 0,
       competitive: 0,
       synergy: 0,
-      shared: 0,
+      independent: 0,
       cooperation: 0
     };
 
@@ -136,7 +136,7 @@ export class RealisticAdaptiveAgent {
     allocation.project = Math.floor(resources * projectPct);
     allocation.competitive = Math.floor(resources * competitivePct * 0.35); // Reduced from 0.5
     allocation.synergy = Math.floor(resources * cooperativePct * 0.35);
-    allocation.shared = Math.floor(resources * cooperativePct * 0.35);
+    allocation.independent = Math.floor(resources * cooperativePct * 0.35);
     allocation.cooperation = Math.floor(resources * cooperativePct * 0.15); // Reduced to prevent exploitation
 
     // Handle remainder - distribute more evenly instead of all to competitive
@@ -149,7 +149,7 @@ export class RealisticAdaptiveAgent {
       allocation.project += projectBonus;
       allocation.synergy += synergyBonus;
     } else if (diff < 0) {
-      for (const key of ['shared', 'cooperation', 'synergy', 'competitive'] as const) {
+      for (const key of ['independent', 'cooperation', 'synergy', 'competitive'] as const) {
         if (allocation[key] >= Math.abs(diff)) {
           allocation[key] += diff;
           break;
@@ -200,7 +200,7 @@ export class RealisticAdaptiveAgent {
 
     distributeToType('competitive', allocation.competitive);
     distributeToType('synergy', allocation.synergy);
-    distributeToType('shared', allocation.shared);
+    distributeToType('independent', allocation.independent);
     distributeToType('cooperation', allocation.cooperation);
 
     return placements;

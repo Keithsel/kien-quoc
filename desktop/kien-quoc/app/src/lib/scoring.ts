@@ -54,7 +54,7 @@ export function calculateCellScores(
       break;
     }
 
-    case 'shared': {
+    case 'independent': {
       // Simple multiplier
       for (const [teamId, res] of entries) {
         scores[teamId] = res * multiplier;
