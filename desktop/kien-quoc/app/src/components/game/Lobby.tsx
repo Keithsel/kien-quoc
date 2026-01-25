@@ -1,6 +1,6 @@
 import { createSignal, For, Show, createMemo, onMount, onCleanup } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
-import { ArrowLeft, Crown, Users, Eye, Play, Check, Wifi, WifiOff, Bot, Plus, X } from 'lucide-solid';
+import { ArrowLeft, Crown, Users, Eye, Play, Check, Wifi, WifiOff, Bot, Plus, X, Info } from 'lucide-solid';
 import {
   subscribeToGame,
   startOnlineGame,
@@ -15,6 +15,7 @@ import { ensureAuth } from '~/lib/firebase/client';
 import type { OnlineGameData, Role } from '~/lib/firebase/types';
 import type { RegionId } from '~/config/regions';
 import { REGIONS } from '~/config/regions';
+import InstructionModal from '~/components/game/modals/InstructionModal';
 
 interface LobbyProps {
   role: Role;
@@ -28,6 +29,7 @@ export default function OnlineLobby(props: LobbyProps) {
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal('');
   const [selectedTeam, setSelectedTeam] = createSignal<RegionId | null>(null);
+  const [showInstructions, setShowInstructions] = createSignal(false);
 
   let unsubscribe: (() => void) | null = null;
 
@@ -176,13 +178,23 @@ export default function OnlineLobby(props: LobbyProps) {
     <main class="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex flex-col p-8">
       {/* Header */}
       <div class="relative flex items-center justify-between mb-8">
-        <button
-          onClick={() => history.back()}
-          class="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
-        >
-          <ArrowLeft class="w-5 h-5" />
-          <span>Quay lại</span>
-        </button>
+        <div class="flex items-center gap-4">
+          <button
+            onClick={() => history.back()}
+            class="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+          >
+            <ArrowLeft class="w-5 h-5" />
+            <span>Quay lại</span>
+          </button>
+
+          <button
+            onClick={() => setShowInstructions(true)}
+            class="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+          >
+            <Info class="w-5 h-5" />
+            <span>Hướng dẫn</span>
+          </button>
+        </div>
 
         {/* Connection status - absolutely centered */}
         <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
@@ -274,23 +286,28 @@ export default function OnlineLobby(props: LobbyProps) {
             <h2 class="text-xl font-bold text-gray-700 mb-4">Chọn vùng miền</h2>
             <div class="grid grid-cols-1 gap-3">
               <For each={availableTeams()}>
-                {(region) => (
-                  <button
-                    onClick={() => handleJoinTeam(region.id)}
-                    disabled={loading()}
-                    class={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                      loading() ? 'opacity-50 cursor-not-allowed' : 'hover:border-red-500 hover:bg-red-50'
-                    } border-gray-200`}
-                  >
-                    <div class={`w-12 h-12 rounded-xl ${region.colorClass} flex items-center justify-center`}>
-                      <span class="text-white font-bold text-lg">{region.name.charAt(0)}</span>
-                    </div>
-                    <div class="text-left">
-                      <div class="font-bold text-gray-800">{region.name}</div>
-                      <div class="text-sm text-gray-500">Có sẵn</div>
-                    </div>
-                  </button>
-                )}
+                {(region) => {
+                  const IconComponent = region.icon;
+                  return (
+                    <button
+                      onClick={() => handleJoinTeam(region.id)}
+                      disabled={loading()}
+                      class={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                        loading() ? 'opacity-50 cursor-not-allowed' : 'hover:border-red-500 hover:bg-red-50'
+                      } border-gray-200`}
+                    >
+                      <div
+                        class={`w-12 h-12 rounded-xl ${region.colorClass} flex items-center justify-center shrink-0`}
+                      >
+                        <IconComponent class="w-6 h-6 text-white" />
+                      </div>
+                      <div class="text-left flex-1 min-w-0">
+                        <div class="font-bold text-gray-800">{region.name}</div>
+                        <div class="text-xs text-gray-500">{region.description}</div>
+                      </div>
+                    </button>
+                  );
+                }}
               </For>
             </div>
           </div>
@@ -401,6 +418,9 @@ export default function OnlineLobby(props: LobbyProps) {
           </div>
         </Show>
       </div>
+      <Show when={showInstructions()}>
+        <InstructionModal onClose={() => setShowInstructions(false)} />
+      </Show>
     </main>
   );
 }

@@ -15,7 +15,8 @@ import {
   Globe,
   Leaf,
   Lightbulb,
-  TriangleAlert
+  TriangleAlert,
+  Star
 } from 'lucide-solid';
 import {
   PHASE_DURATIONS,
@@ -167,7 +168,7 @@ export default function InstructionModal(props: InstructionModalProps) {
               </div>
 
               <div class="grid grid-cols-2 gap-4">
-                <div class="p-4 bg-green-50 rounded-xl border-2 border-green-200">
+                <div class="p-4 bg-green-50 rounded-xl">
                   <div class="text-green-700 font-bold mb-2">✓ Dự án thành công</div>
                   <ul class="text-sm text-gray-600 space-y-1">
                     <li>• Đạt đủ RP yêu cầu</li>
@@ -178,7 +179,7 @@ export default function InstructionModal(props: InstructionModalProps) {
                     <li>• Nhận điểm thưởng theo đóng góp</li>
                   </ul>
                 </div>
-                <div class="p-4 bg-red-50 rounded-xl border-2 border-red-200">
+                <div class="p-4 bg-red-50 rounded-xl">
                   <div class="text-red-700 font-bold mb-2">✗ Dự án thất bại</div>
                   <ul class="text-sm text-gray-600 space-y-1">
                     <li>• Không đủ RP hoặc đội</li>
@@ -227,9 +228,19 @@ export default function InstructionModal(props: InstructionModalProps) {
                   )}
                 </For>
               </div>
-              <div class="p-3 bg-blue-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
-                <Lightbulb class="w-4 h-4 text-blue-600" />
-                Phân bố tài nguyên vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (bất kể dự án)
+              <div class="space-y-2">
+                <div class="p-3 bg-blue-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
+                  <Lightbulb class="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>
+                    Phân bổ vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (không cần dự án thành công)
+                  </span>
+                </div>
+                <div class="p-3 bg-amber-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
+                  <Star class="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    Mỗi đội có <strong>thế mạnh riêng</strong>. Đầu tư vào ô trùng với ưu thế sẽ nhận thêm điểm!
+                  </span>
+                </div>
               </div>
             </div>
           </Show>
