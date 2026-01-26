@@ -5,13 +5,29 @@ import {
   SYNERGY_FREE_PARTICIPANTS,
   COMPETITIVE_LOSER_MULTIPLIER,
   INDEX_BOOST_DIVISOR,
-  REGION_SPECIALIZATION_MULTIPLIER
+  REGION_SPECIALIZATION_MULTIPLIER,
+  UNDERDOG_MULTIPLIER,
+  UNDERDOG_START_TURN,
+  UNDERDOG_THRESHOLD
 } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
 import type { Placements, NationalIndices, TurnResult } from './types';
 import type { RegionId } from '~/config/regions';
 import { REGION_MAP } from '~/config/regions';
+
+/**
+ * Determine which teams are "underdogs" based on current rankings.
+ * Underdogs are the bottom UNDERDOG_THRESHOLD% of teams.
+ */
+export function getUnderdogTeams(teamPoints: Record<RegionId, number>, turn: number): Set<RegionId> {
+  if (turn < UNDERDOG_START_TURN) return new Set();
+
+  const sorted = Object.entries(teamPoints).sort(([, a], [, b]) => a - b);
+  const underdogCount = Math.floor(sorted.length * UNDERDOG_THRESHOLD);
+
+  return new Set(sorted.slice(0, underdogCount).map(([id]) => id as RegionId));
+}
 
 export function calculateCellScores(
   cellId: string,
@@ -173,7 +189,8 @@ export function calculateTurnScores(
   turn: number,
   allPlacements: Record<RegionId, Placements>,
   currentIndices: NationalIndices,
-  activeTeams: number = 5
+  activeTeams: number = 5,
+  cumulativePoints?: Record<RegionId, number>
 ): TurnResult {
   // 1. Process project with correct team count
   const { success, totalRP, participatingTeams } = processProject(turn, allPlacements, activeTeams);
@@ -181,7 +198,10 @@ export function calculateTurnScores(
   // 2. Apply project result
   const { changes } = applyProjectResult(turn, success, currentIndices);
 
-  // 3. Calculate cell scores
+  // 3. Calculate underdog teams based on cumulative points
+  const underdogs = cumulativePoints ? getUnderdogTeams(cumulativePoints, turn) : new Set<RegionId>();
+
+  // 4. Calculate cell scores
   const teamPoints: Record<string, number> = {};
   for (const teamId of Object.keys(allPlacements)) {
     teamPoints[teamId] = 0;
@@ -191,12 +211,14 @@ export function calculateTurnScores(
     if (cell.type !== 'project') {
       const cellScores = calculateCellScores(cell.id, allPlacements);
       for (const [teamId, score] of Object.entries(cellScores)) {
-        teamPoints[teamId] = (teamPoints[teamId] || 0) + score;
+        // Apply underdog multiplier if applicable
+        const finalScore = underdogs.has(teamId as RegionId) ? score * UNDERDOG_MULTIPLIER : score;
+        teamPoints[teamId] = (teamPoints[teamId] || 0) + finalScore;
       }
     }
   }
 
-  // 4. Add bonus points from successful project
+  // 5. Add bonus points from successful project
   if (success) {
     const event = TURN_EVENTS[turn - 1];
     const bonusPoints = event.successReward.points;
@@ -216,7 +238,8 @@ export function calculateTurnScores(
     teamCount: participatingTeams.length,
     indexChanges: changes,
     zoneBoosts: {}, // Zone boosts are calculated and added separately by engine.ts
-    teamPoints: teamPoints as Record<RegionId, number>
+    teamPoints: teamPoints as Record<RegionId, number>,
+    underdogs: Array.from(underdogs)
   };
 }
 

@@ -29,6 +29,7 @@ export interface TurnResult {
   indexChanges: Partial<NationalIndices>; // Project success/failure changes
   zoneBoosts: Partial<NationalIndices>; // Cell placement bonus (always applied)
   teamPoints: Record<RegionId, number>;
+  underdogs?: RegionId[]; // Teams that received underdog bonus this turn
 }
 
 export interface GameOver {

@@ -68,6 +68,12 @@ export const RESOURCES_PER_TURN = 14;
 export const MAX_TEAMS = 5;
 export const MAX_TURNS = 8;
 
+// Late Game Catch-up: Underdog Bonus
+export const UNDERDOG_BONUS_RP = 1; // Bonus RP for underdog teams
+export const UNDERDOG_MULTIPLIER = 1.05; // Score multiplier for underdog teams
+export const UNDERDOG_START_TURN = 5; // Turn when underdog bonus activates
+export const UNDERDOG_THRESHOLD = 0.4; // Bottom 40% of teams qualify
+
 import { createSignal } from 'solid-js';
 
 // Test mode signals
