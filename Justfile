@@ -30,6 +30,10 @@ alias tb := tauri-build
 alias l := lint
 alias tc := typecheck
 alias pc := precommit
+alias f := format
+alias rb := rebuild
+alias qr := quick-release
+alias r := release
 
 # ----------------
 # Utility Commands
@@ -131,6 +135,21 @@ rebuild: clean build
 # --------
 # Releases
 # --------
+
+# Quick release: bump version, commit, tag, push, and create GitHub release
+[group('release')]
+quick-release version:
+  #!/usr/bin/env sh
+  # Update version in config files
+  sed -i 's/"version": "[^"]*"/"version": "{{version}}"/' {{APP_DIR}}/package.json
+  sed -i 's/"version": "[^"]*"/"version": "{{version}}"/' {{APP_DIR}}/src-tauri/tauri.conf.json
+  # Commit and push
+  git add -A
+  git commit -m "chore: release v{{version}}"
+  git push origin main
+  # Create GitHub release
+  gh release create "v{{version}}" --title "v{{version}}" --generate-notes
+  echo "✅ Released v{{version}}!"
 
 # Create a new release tag (triggers GitHub Actions build)
 [group('release')]
