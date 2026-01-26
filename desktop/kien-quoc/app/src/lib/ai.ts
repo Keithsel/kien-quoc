@@ -1,4 +1,4 @@
-import { RESOURCES_PER_TURN, type CellType } from '~/config/game';
+import { RESOURCES_PER_TURN, type CellType, type IndexName } from '~/config/game';
 import { getCellsByType, PROJECT_CELLS } from '~/config/board';
 import type { NationalIndices, Placements } from './types';
 import type { TurnEvent } from '~/config/events';
@@ -175,11 +175,21 @@ export class RealisticAdaptiveAgent {
 
   /**
    * Distribute allocation to cells. AI focuses on fewer cells to maximize impact.
-   * Now prioritizes cells specialized by the region.
+   * Now prioritizes:
+   * 1. Cells that boost WEAK indices (survival mode)
+   * 2. Cells specialized by the region (normal mode)
    */
-  distributeToCells(allocation: AllocationByType): Placements {
+  distributeToCells(allocation: AllocationByType, nationalIndices?: NationalIndices): Placements {
     const placements: Placements = {};
     const region = REGION_MAP[this.teamId as RegionId];
+
+    // Identify weak indices (threshold: 4 or below)
+    const weakIndices: IndexName[] = nationalIndices
+      ? (Object.entries(nationalIndices) as [IndexName, number][])
+          .filter(([, value]) => value <= 4)
+          .sort((a, b) => a[1] - b[1]) // Sort by weakest first
+          .map(([name]) => name)
+      : [];
 
     // Project cells - focus on one project cell
     if (allocation.project > 0) {
@@ -192,12 +202,25 @@ export class RealisticAdaptiveAgent {
       if (amount <= 0) return;
       const cells = getCellsByType(type);
 
-      // Separate cells into specialized and non-specialized
-      const specialized = cells.filter((c) => region?.specializedIndices.some((idx) => c.indices.includes(idx)));
-      const others = cells.filter((c) => !specialized.includes(c));
+      // Priority 1: Cells that boost WEAK indices (survival mode takes precedence)
+      const boostsWeakIndex = cells.filter((c) => weakIndices.some((idx) => c.indices.includes(idx)));
 
-      // 60% chance to pick from specialized list if it exists
-      const pool = specialized.length > 0 && Math.random() < 0.6 ? shuffleArray(specialized) : shuffleArray(cells);
+      // Priority 2: Cells specialized by region
+      const specialized = cells.filter((c) => region?.specializedIndices.some((idx) => c.indices.includes(idx)));
+
+      // Priority 3: Everything else
+      const others = cells.filter((c) => !boostsWeakIndex.includes(c) && !specialized.includes(c));
+
+      let pool: typeof cells;
+      if (boostsWeakIndex.length > 0 && this.survivalMode) {
+        // Survival mode: 60% chance to pick cells boosting weak indices
+        pool = Math.random() < 0.6 ? shuffleArray(boostsWeakIndex) : shuffleArray(cells);
+      } else if (specialized.length > 0) {
+        // Normal mode: 60% chance to pick from specialized list
+        pool = Math.random() < 0.6 ? shuffleArray(specialized) : shuffleArray(cells);
+      } else {
+        pool = shuffleArray(cells);
+      }
 
       const numCells = Math.random() < 0.7 ? 1 : Math.min(2, pool.length);
       const chosen = pool.slice(0, numCells);
@@ -230,7 +253,7 @@ export class RealisticAdaptiveAgent {
     event: TurnEvent
   ): Placements {
     const allocation = this.decideAllocation(turn, myScore, avgScore, nationalIndices, event);
-    return this.distributeToCells(allocation);
+    return this.distributeToCells(allocation, nationalIndices);
   }
 }
 
