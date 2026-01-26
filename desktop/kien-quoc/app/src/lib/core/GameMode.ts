@@ -8,6 +8,10 @@
 
 import type { RegionId } from '~/config/regions';
 import type { IndexName, PhaseName, GameStatus, GameMode as GameModeType } from '~/config/game';
+import type { TurnEvent, RandomModifierId } from '~/config/events';
+
+// Re-export for consumers
+export type { TurnEvent, RandomModifierId } from '~/config/events';
 
 // ============================================================================
 // DATA TYPES (shared between modes)
@@ -26,21 +30,6 @@ export interface Team {
   connected: boolean;
   isAI?: boolean;
   cumulativeAllocations?: Placements;
-}
-
-export interface TurnEvent {
-  turn: number;
-  year: number;
-  name: string;
-  scenario: string;
-  project: string;
-  minTotal: number;
-  minTeams: number;
-  successReward: {
-    points: number;
-    indices: Partial<NationalIndices>;
-  };
-  failurePenalty: Partial<NationalIndices>;
 }
 
 export interface TurnResult {
@@ -106,6 +95,9 @@ export interface GameStateDTO {
 
   // Current Event (with scaled requirements)
   currentEvent: TurnEvent | null;
+
+  // Random modifiers per turn (shuffled at game start)
+  randomModifiers?: RandomModifierId[];
 
   // Project State
   project: ProjectState;

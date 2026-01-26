@@ -18,20 +18,20 @@ import {
   TrendingUp,
   TrendingDown,
   Trophy,
-  CircleX,
-  Download
+  CircleX
 } from 'lucide-solid';
 import { useGame } from '~/lib/game/context';
 import { useTimer, usePhaseAnimations } from '~/lib/game/hooks';
 import { extendOnlineTime, forceSubmitAllTeams } from '~/lib/firebase/game';
 import ExportButton from '~/components/ui/ExportButton';
-import { INDEX_NAMES, INDEX_LABELS, type IndexName } from '~/config/game';
+import { INDEX_NAMES, INDEX_LABELS } from '~/config/game';
 import EventPopup from '~/components/game/modals/EventPopup';
 import TeamPanel from './TeamPanel';
 import HostBoard from './HostBoard';
 import { PROJECT_CELLS } from '~/config/board';
 import { onlineGame } from '~/lib/firebase/store';
 import { INDEX_ICONS, INDEX_COLORS, PHASE_LABELS, getPhaseColor, PHASES } from '~/components/game/shared/constants';
+import { FIXED_MODIFIERS, RANDOM_MODIFIERS } from '~/config/events';
 
 interface HostViewProps {
   onBack: () => void;
@@ -115,6 +115,21 @@ export default function HostView(props: HostViewProps) {
     if (!ev) return false;
     return totalProjectRP() >= ev.minTotal && contributingTeams() >= ev.minTeams;
   };
+
+  // Modifier helpers for the sidebar/popup
+  const turnFixedMod = createMemo(() => {
+    const ev = game.event();
+    const mod = ev?.fixedModifier ? FIXED_MODIFIERS[ev.fixedModifier] : null;
+    return mod;
+  });
+
+  const turnRandomMod = createMemo(() => {
+    const mods = game.randomModifiers();
+    const turn = game.currentTurn();
+    const modId = mods?.[turn - 1];
+    const mod = modId ? RANDOM_MODIFIERS[modId] : null;
+    return mod;
+  });
 
   const handleExtendTime = async (seconds: number) => {
     try {
@@ -377,6 +392,65 @@ export default function HostView(props: HostViewProps) {
             </Show>
           </div>
 
+          {/* Modifiers Panel - under Project Status */}
+          <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-3">
+            <h3 class="font-semibold text-gray-600 text-xs mb-2 uppercase tracking-wide">Bối cảnh</h3>
+            <Show
+              when={turnFixedMod() || turnRandomMod()}
+              fallback={
+                <div class="text-xs text-gray-400 italic">Không có bối cảnh cho lượt này ({game.currentTurn()})</div>
+              }
+            >
+              <div class="space-y-2">
+                <Show when={turnFixedMod()}>
+                  <div class="flex items-start gap-2 border-b border-gray-100 pb-2 mb-2">
+                    <div
+                      class={`p-1 rounded-lg shrink-0 ${turnFixedMod()!.isPositive ? 'bg-green-100' : 'bg-red-100'}`}
+                    >
+                      {turnFixedMod()!.isPositive ? (
+                        <TrendingUp class="w-3.5 h-3.5 text-green-600" />
+                      ) : (
+                        <TrendingDown class="w-3.5 h-3.5 text-red-600" />
+                      )}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs text-gray-500 font-medium">Lịch sử</div>
+                      <div
+                        class={`text-sm font-semibold ${turnFixedMod()!.isPositive ? 'text-green-700' : 'text-red-700'}`}
+                      >
+                        {turnFixedMod()!.name}
+                      </div>
+                      <div class="text-xs text-gray-600 leading-tight">{turnFixedMod()!.description}</div>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={turnRandomMod()}>
+                  <div class="flex items-start gap-2">
+                    <div
+                      class={`p-1 rounded-lg shrink-0 ${turnRandomMod()!.isPositive ? 'bg-green-100' : 'bg-red-100'}`}
+                    >
+                      {turnRandomMod()!.isPositive ? (
+                        <TrendingUp class="w-3.5 h-3.5 text-green-600" />
+                      ) : (
+                        <TrendingDown class="w-3.5 h-3.5 text-red-600" />
+                      )}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs text-gray-500 font-medium">Ngẫu nhiên</div>
+                      <div
+                        class={`text-sm font-semibold ${turnRandomMod()!.isPositive ? 'text-green-700' : 'text-red-700'}`}
+                      >
+                        {turnRandomMod()!.name}
+                      </div>
+                      <div class="text-xs text-gray-600 leading-tight">{turnRandomMod()!.description}</div>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </Show>
+          </div>
+
           {/* Spacer to push National Indices to bottom */}
           <div class="flex-1" />
 
@@ -460,6 +534,7 @@ export default function HostView(props: HostViewProps) {
           event={game.scaledEvent()!}
           turn={game.currentTurn()}
           lastTurnResult={game.lastTurnResult()}
+          randomModifier={game.randomModifiers()?.[game.currentTurn() - 1]}
           onClose={() => setShowEventPopup(false)}
         />
       </Show>

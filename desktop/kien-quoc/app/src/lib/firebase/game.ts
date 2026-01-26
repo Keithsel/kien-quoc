@@ -89,7 +89,8 @@ function createStoredEvent(turn: number, activeTeams: number): OnlineTurnEvent |
     originalMinTotal: event.minTotal,
     originalMinTeams: event.minTeams,
     successReward: event.successReward,
-    failurePenalty: event.failurePenalty
+    failurePenalty: event.failurePenalty,
+    fixedModifier: event.fixedModifier
   };
 }
 
@@ -247,6 +248,9 @@ export async function startOnlineGame(): Promise<void> {
     throw new Error(`Cần tối thiểu ${minTeams} đội để bắt đầu`);
   }
 
+  const { RANDOM_MODIFIER_POOL } = await import('~/config/events');
+  const shuffledModifiers = [...RANDOM_MODIFIER_POOL].sort(() => Math.random() - 0.5).slice(0, 8);
+
   await update(gameRef, {
     status: 'playing',
     currentTurn: 1,
@@ -254,7 +258,8 @@ export async function startOnlineGame(): Promise<void> {
     phaseEndTime: Date.now() + 24 * 60 * 60 * 1000,
     turnActiveTeams: teamCount,
     currentEvent: createStoredEvent(1, teamCount),
-    project: { totalRP: 0, teamCount: 0, success: null }
+    project: { totalRP: 0, teamCount: 0, success: null },
+    randomModifiers: shuffledModifiers
   });
 }
 

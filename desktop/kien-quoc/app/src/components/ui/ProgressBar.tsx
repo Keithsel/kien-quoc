@@ -5,8 +5,6 @@
  * Used for indices, resources, project progress, etc.
  */
 
-import type { JSX } from 'solid-js';
-
 export interface ProgressBarProps {
   /** Current value (0-max) */
   value: number;

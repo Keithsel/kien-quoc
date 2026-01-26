@@ -7,7 +7,7 @@
 import { Show, For, createMemo } from 'solid-js';
 import { TrendingUp, TrendingDown, TriangleAlert } from 'lucide-solid';
 import { useGame } from '~/lib/game/context';
-import { INDEX_NAMES, INDEX_LABELS, RESOURCES_PER_TURN, type IndexName } from '~/config/game';
+import { INDEX_NAMES, INDEX_LABELS, RESOURCES_PER_TURN } from '~/config/game';
 import { INDEX_ICONS, INDEX_COLORS } from '~/components/game/shared/constants';
 
 interface LeftSidebarProps {

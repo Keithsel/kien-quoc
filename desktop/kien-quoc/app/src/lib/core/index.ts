@@ -16,7 +16,8 @@ export type {
   TurnEvent,
   TurnResult,
   GameOver,
-  ProjectState
+  ProjectState,
+  RandomModifierId
 } from './GameMode';
 
 // Mode implementations (usually not needed directly - use facade)

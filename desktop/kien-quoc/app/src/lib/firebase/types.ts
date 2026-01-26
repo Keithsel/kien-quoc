@@ -55,6 +55,8 @@ export interface OnlineTurnEvent {
     indices: Partial<Record<IndexName, number>>;
   };
   failurePenalty: Partial<Record<IndexName, number>>;
+  /** Optional historical modifier for this specific turn */
+  fixedModifier?: string;
 }
 
 /**
@@ -99,6 +101,10 @@ export interface TurnHistoryEntry {
     year: number;
     project: string;
   };
+  /** Fixed modifier for this turn (historically grounded) */
+  fixedModifier?: string;
+  /** Random modifier for this turn (from shuffled pool) */
+  randomModifier?: string;
   allocations: Record<RegionId, Record<string, number>>; // team -> cellId -> RP
   indicesSnapshot: Record<IndexName, number>; // Indices after turn resolution
   projectSuccess: boolean;
@@ -156,6 +162,8 @@ export interface OnlineGameData {
 
   // === HISTORY ===
   turnHistory: TurnHistoryEntry[]; // Per-turn snapshots for export
+  /** Optional pool of random modifiers for the whole game */
+  randomModifiers?: string[];
 }
 
 /**

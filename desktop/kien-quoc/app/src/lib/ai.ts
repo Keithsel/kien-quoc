@@ -123,7 +123,7 @@ export class RealisticAdaptiveAgent {
         break;
 
       case 'balanced':
-      default:
+      default: {
         // Adapt based on score difference
         if (myScore < avgScore * 0.85) {
           // Behind: be more cooperative to catch up via synergy
@@ -137,6 +137,7 @@ export class RealisticAdaptiveAgent {
         competitivePct = remaining * (1 - this.currentTendency);
         cooperativePct = remaining * this.currentTendency;
         break;
+      }
     }
 
     // Allocate resources with personality-influenced distribution

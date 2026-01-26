@@ -29,7 +29,13 @@ import {
   type PhaseName,
   type IndexName
 } from '~/config/game';
-import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
+import {
+  TURN_EVENTS,
+  getScaledRequirements,
+  getTurnModifierEffect,
+  RANDOM_MODIFIER_POOL,
+  type RandomModifierId
+} from '~/config/events';
 import { db, ensureAuth, getCurrentUserId } from '~/lib/firebase/client';
 import { calculateTurnScores, applyProjectResult, updateIndicesFromCells } from '~/lib/scoring';
 import { RealisticAdaptiveAgent } from '~/lib/ai';
@@ -78,6 +84,7 @@ interface FirebaseGameData {
     projectRequirements: { minRP: number; minTeams: number };
     teamPoints: Record<string, number>;
   }>;
+  randomModifiers?: RandomModifierId[];
 }
 
 // ============================================================================
@@ -348,6 +355,8 @@ export class OnlineMode implements IGameMode {
       throw new Error('Cần tối thiểu 2 đội để bắt đầu');
     }
 
+    // Generate random modifiers for all 8 turns
+    const shuffledModifiers = [...RANDOM_MODIFIER_POOL].sort(() => Math.random() - 0.5).slice(0, 8);
     const event = this.getScaledEvent(1, teamCount);
 
     await update(ref(db!, GAME_PATH), {
@@ -357,7 +366,8 @@ export class OnlineMode implements IGameMode {
       phaseEndTime: Date.now() + 24 * 60 * 60 * 1000,
       turnActiveTeams: teamCount,
       currentEvent: event,
-      project: { totalRP: 0, teamCount: 0, success: null }
+      project: { totalRP: 0, teamCount: 0, success: null },
+      randomModifiers: shuffledModifiers
     });
   }
 
@@ -435,7 +445,7 @@ export class OnlineMode implements IGameMode {
       teams[id as RegionId] = this.convertTeam(id as RegionId, t);
     }
 
-    return {
+    const dto: GameStateDTO = {
       mode: 'online',
       status: data.status === 'waiting' ? 'lobby' : data.status,
       currentTurn: data.currentTurn,
@@ -448,8 +458,11 @@ export class OnlineMode implements IGameMode {
       project: data.project,
       lastTurnResult: data.lastTurnResult ?? undefined,
       gameOver: data.gameOver ?? undefined,
-      turnHistory: data.turnHistory ?? []
+      turnHistory: data.turnHistory ?? [],
+      randomModifiers: data.randomModifiers
     };
+
+    return dto;
   }
 
   private convertTeam(id: RegionId, t: FirebaseTeam): Team {
@@ -471,8 +484,9 @@ export class OnlineMode implements IGameMode {
     if (!event) return null;
 
     const { minTotal, minTeams } = getScaledRequirements(event, activeTeams);
+    const scaled = { ...event, minTotal, minTeams };
 
-    return { ...event, minTotal, minTeams };
+    return scaled;
   }
 
   private async forceSubmitAllTeams(): Promise<void> {
@@ -546,13 +560,17 @@ export class OnlineMode implements IGameMode {
       }
     }
 
+    // Compute combined modifier effect for this turn
+    const modifierEffect = getTurnModifierEffect(data.currentTurn, data.randomModifiers);
+
     // Calculate scores
     const result = calculateTurnScores(
       data.currentTurn,
       allPlacements as Record<RegionId, Record<string, number>>,
       data.nationalIndices as NationalIndices,
       data.turnActiveTeams,
-      cumulativePoints
+      cumulativePoints,
+      modifierEffect
     );
 
     // Apply project result
@@ -562,10 +580,11 @@ export class OnlineMode implements IGameMode {
       data.nationalIndices as NationalIndices
     );
 
-    // Apply cell boosts
+    // Apply cell boosts (with modifier effect for indexDivisorAdjust)
     const { newIndices: finalIndices, boosts } = updateIndicesFromCells(
       allPlacements as Record<RegionId, Record<string, number>>,
-      indicesAfterProject
+      indicesAfterProject,
+      modifierEffect
     );
 
     // Apply maintenance (skip on last turn - turn 8 - since game ends)

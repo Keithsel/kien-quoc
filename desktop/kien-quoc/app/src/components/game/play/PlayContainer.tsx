@@ -263,6 +263,7 @@ export default function PlayContainer() {
           event={game.scaledEvent()!}
           turn={game.currentTurn()}
           lastTurnResult={game.lastTurnResult()}
+          randomModifier={game.randomModifiers()?.[game.currentTurn() - 1]}
           onClose={() => setShowEventPopup(false)}
         />
       </Show>

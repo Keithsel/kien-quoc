@@ -18,15 +18,7 @@ import {
   TriangleAlert,
   Star
 } from 'lucide-solid';
-import {
-  PHASE_DURATIONS,
-  RESOURCES_PER_TURN,
-  MAX_TURNS,
-  CELL_MULTIPLIERS,
-  SYNERGY_SCALING,
-  SYNERGY_BASE,
-  SYNERGY_FREE_PARTICIPANTS
-} from '~/config/game';
+import { PHASE_DURATIONS, RESOURCES_PER_TURN, MAX_TURNS, CELL_MULTIPLIERS } from '~/config/game';
 import { cellTypeLabels, cellEffects } from '~/components/game/play/shared/labels';
 
 interface InstructionModalProps {
@@ -207,8 +199,7 @@ export default function InstructionModal(props: InstructionModalProps) {
                 <div>
                   <div class="font-bold text-orange-700 text-sm">Hỗ trợ vùng khó khăn</div>
                   <p class="text-sm text-gray-600">
-                    Từ lượt 5, các đội top dưới 40% được hỗ trợ thêm RP và điểm để có sức 
-                    bật với các khu vực mạnh hơn.
+                    Từ lượt 5, các đội top dưới 40% được hỗ trợ thêm RP và điểm để có sức bật với các khu vực mạnh hơn.
                   </p>
                 </div>
               </div>

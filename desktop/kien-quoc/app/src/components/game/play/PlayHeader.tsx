@@ -7,7 +7,6 @@
  */
 import { Show, For } from 'solid-js';
 import { Calendar, ArrowRight, Pause, Play, ArrowLeft, Clock, RotateCcw, CircleQuestionMark } from 'lucide-solid';
-import type { PhaseName } from '~/config/game';
 import { useGame } from '~/lib/game/context';
 import { PHASES, PHASE_LABELS, getPhaseColor } from '~/components/game/shared/constants';
 

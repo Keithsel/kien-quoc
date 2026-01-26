@@ -16,7 +16,8 @@ import {
   type TurnEvent,
   type TurnResult,
   type GameOver,
-  type NationalIndices
+  type NationalIndices,
+  type RandomModifierId
 } from '~/lib/core';
 import type { RegionId } from '~/config/regions';
 import type { PhaseName, GameMode as GameModeType } from '~/config/game';
@@ -50,6 +51,7 @@ export interface GameContextValue {
   scaledEvent: () => TurnEvent | null;
   lastTurnResult: () => TurnResult | undefined;
   gameOver: () => GameOver | undefined;
+  randomModifiers: () => RandomModifierId[] | undefined;
 
   // Actions
   advancePhase: () => Promise<void>;
@@ -134,6 +136,7 @@ export function GameProvider(props: GameProviderProps) {
 
   const event = createMemo(() => state().currentEvent);
   const scaledEvent = createMemo(() => state().currentEvent);
+  const randomModifiers = createMemo(() => state().randomModifiers);
 
   // Live project progress - calculate from team placements
   const projectRP = createMemo(() => {
@@ -232,6 +235,7 @@ export function GameProvider(props: GameProviderProps) {
     scaledEvent: () => scaledEvent(),
     lastTurnResult: () => lastTurnResult(),
     gameOver: () => gameOver(),
+    randomModifiers: () => randomModifiers(),
     advancePhase,
     submitPlacements,
     cancelSubmission,

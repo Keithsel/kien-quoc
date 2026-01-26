@@ -9,7 +9,7 @@ import { createStore, produce, type SetStoreFunction } from 'solid-js/store';
 import { Transaction, type TransactionExecutor, type TransactionOptions } from './Transaction';
 import type { GameStateDTO } from '~/lib/core/GameMode';
 import type { RegionId } from '~/config/regions';
-import { INITIAL_INDICES, type IndexName, type PhaseName } from '~/config/game';
+import { INITIAL_INDICES, type IndexName } from '~/config/game';
 import { REGIONS } from '~/config/regions';
 
 // ============================================================================

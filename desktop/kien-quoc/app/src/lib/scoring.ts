@@ -11,7 +11,7 @@ import {
   UNDERDOG_THRESHOLD
 } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
-import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
+import { TURN_EVENTS, getScaledRequirements, type ModifierEffect } from '~/config/events';
 import type { Placements, NationalIndices, TurnResult } from './types';
 import type { RegionId } from '~/config/regions';
 import { REGION_MAP } from '~/config/regions';
@@ -29,14 +29,32 @@ export function getUnderdogTeams(teamPoints: Record<RegionId, number>, turn: num
   return new Set(sorted.slice(0, underdogCount).map(([id]) => id as RegionId));
 }
 
+/**
+ * Calculate scores for a single cell, applying modifier effects if provided.
+ * @param modifierEffect - Combined effect from fixed + random modifiers
+ */
 export function calculateCellScores(
   cellId: string,
-  allPlacements: Partial<Record<RegionId, Placements>>
+  allPlacements: Partial<Record<RegionId, Placements>>,
+  modifierEffect?: ModifierEffect
 ): Partial<Record<RegionId, number>> {
   const cell = BOARD_CELLS.find((c) => c.id === cellId);
   if (!cell) return {} as Partial<Record<RegionId, number>>;
 
-  const multiplier = CELL_MULTIPLIERS[cell.type];
+  // Base multiplier from cell type
+  let multiplier = CELL_MULTIPLIERS[cell.type];
+
+  // Apply modifier effects
+  if (modifierEffect) {
+    // Global multiplier affects all cells
+    if (modifierEffect.globalMultiplier) {
+      multiplier *= modifierEffect.globalMultiplier;
+    }
+    // Cell-specific multiplier
+    if (modifierEffect.cellMultipliers?.[cell.type]) {
+      multiplier *= modifierEffect.cellMultipliers[cell.type]!;
+    }
+  }
 
   // Gather team resources on this cell
   const teamResources: Partial<Record<RegionId, number>> = {};
@@ -101,8 +119,9 @@ export function calculateCellScores(
     }
 
     case 'cooperation': {
-      // Requires 2+ teams
-      if (numParticipants >= 2) {
+      // Requires 2+ teams (or minCoopTeams from modifier)
+      const minTeams = modifierEffect?.minCoopTeams ?? 2;
+      if (numParticipants >= minTeams) {
         for (const [teamId, res] of entries) {
           const baseScore = res * multiplier;
           scores[teamId] = applySpecialization(teamId, baseScore);
@@ -130,7 +149,8 @@ export function calculateCellScores(
 export function processProject(
   turn: number,
   allPlacements: Record<RegionId, Placements>,
-  activeTeams: number = 5
+  activeTeams: number = 5,
+  modifierEffect?: ModifierEffect
 ): {
   success: boolean;
   totalRP: number;
@@ -154,7 +174,9 @@ export function processProject(
     }
   }
 
-  const success = totalRP >= minTotal && participatingTeams.length >= minTeams;
+  // Apply projectRpMultiplier for success check (e.g., 1.5x makes RP count more toward threshold)
+  const effectiveRP = modifierEffect?.projectRpMultiplier ? totalRP * modifierEffect.projectRpMultiplier : totalRP;
+  const success = effectiveRP >= minTotal && participatingTeams.length >= minTeams;
 
   return { success, totalRP, participatingTeams, scaledMinTotal: minTotal, scaledMinTeams: minTeams };
 }
@@ -190,10 +212,11 @@ export function calculateTurnScores(
   allPlacements: Record<RegionId, Placements>,
   currentIndices: NationalIndices,
   activeTeams: number = 5,
-  cumulativePoints?: Record<RegionId, number>
+  cumulativePoints?: Record<RegionId, number>,
+  modifierEffect?: ModifierEffect
 ): TurnResult {
   // 1. Process project with correct team count
-  const { success, totalRP, participatingTeams } = processProject(turn, allPlacements, activeTeams);
+  const { success, totalRP, participatingTeams } = processProject(turn, allPlacements, activeTeams, modifierEffect);
 
   // 2. Apply project result
   const { changes } = applyProjectResult(turn, success, currentIndices);
@@ -201,7 +224,7 @@ export function calculateTurnScores(
   // 3. Calculate underdog teams based on cumulative points
   const underdogs = cumulativePoints ? getUnderdogTeams(cumulativePoints, turn) : new Set<RegionId>();
 
-  // 4. Calculate cell scores
+  // 4. Calculate cell scores (with modifier effects)
   const teamPoints: Record<string, number> = {};
   for (const teamId of Object.keys(allPlacements)) {
     teamPoints[teamId] = 0;
@@ -209,7 +232,7 @@ export function calculateTurnScores(
 
   for (const cell of BOARD_CELLS) {
     if (cell.type !== 'project') {
-      const cellScores = calculateCellScores(cell.id, allPlacements);
+      const cellScores = calculateCellScores(cell.id, allPlacements, modifierEffect);
       for (const [teamId, score] of Object.entries(cellScores)) {
         // Apply underdog multiplier if applicable
         const finalScore = underdogs.has(teamId as RegionId) ? score * UNDERDOG_MULTIPLIER : score;
@@ -232,6 +255,14 @@ export function calculateTurnScores(
     }
   }
 
+  // 6. Apply rpBonus from modifiers (e.g., foreign_aid +2, resource_scarcity -2)
+  // This represents economic conditions affecting all teams' scoring potential
+  if (modifierEffect?.rpBonus) {
+    for (const teamId of Object.keys(allPlacements)) {
+      teamPoints[teamId] = (teamPoints[teamId] || 0) + modifierEffect.rpBonus;
+    }
+  }
+
   return {
     success,
     totalRP,
@@ -245,10 +276,14 @@ export function calculateTurnScores(
 
 export function updateIndicesFromCells(
   allPlacements: Record<RegionId, Placements>,
-  currentIndices: NationalIndices
+  currentIndices: NationalIndices,
+  modifierEffect?: ModifierEffect
 ): { newIndices: NationalIndices; boosts: Partial<NationalIndices> } {
   const boosts: Partial<NationalIndices> = {};
   const newIndices = { ...currentIndices };
+
+  // Apply indexDivisorAdjust from modifiers (e.g., easy_indices makes it easier to gain index points)
+  const effectiveDivisor = INDEX_BOOST_DIVISOR + (modifierEffect?.indexDivisorAdjust ?? 0);
 
   // Sum up resources per index from all cells
   const indexBoost: Record<string, number> = {};
@@ -262,7 +297,7 @@ export function updateIndicesFromCells(
 
       // Each cell boosts its associated indices
       for (const index of cell.indices) {
-        indexBoost[index] = (indexBoost[index] || 0) + Math.floor(resources / INDEX_BOOST_DIVISOR);
+        indexBoost[index] = (indexBoost[index] || 0) + Math.floor(resources / effectiveDivisor);
       }
     }
   }

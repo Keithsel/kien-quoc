@@ -8,16 +8,24 @@
 import type { IGameMode, GameStateDTO, GameInitParams, Team, Placements, TurnEvent } from './GameMode';
 import type { RegionId } from '~/config/regions';
 import { REGIONS } from '~/config/regions';
+import { PHASE_ORDER, RESOURCES_PER_TURN, MAX_TURNS, MAINTENANCE_COST } from '~/config/game';
 import {
-  PHASE_DURATIONS,
-  PHASE_ORDER,
-  RESOURCES_PER_TURN,
-  MAX_TURNS,
-  INITIAL_INDICES,
-  MAINTENANCE_COST,
-  type PhaseName
-} from '~/config/game';
-import { TURN_EVENTS, getScaledRequirements } from '~/config/events';
+  TURN_EVENTS,
+  getScaledRequirements,
+  getTurnModifierEffect,
+  RANDOM_MODIFIER_POOL,
+  type RandomModifierId
+} from '~/config/events';
+
+// Fisher-Yates shuffle
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 import {
   offlineState,
@@ -182,6 +190,10 @@ export class OfflineMode implements IGameMode {
       // Count active teams
       const activeCount = REGIONS.length;
       setOfflineState('activeTeamCount', activeCount);
+
+      // Shuffle random modifiers for each turn (8 turns, take first 8 from shuffled pool)
+      const shuffledModifiers = shuffleArray(RANDOM_MODIFIER_POOL).slice(0, 8) as RandomModifierId[];
+      setOfflineState('randomModifiers', shuffledModifiers);
     }
 
     this.notifySubscribers();
@@ -324,12 +336,16 @@ export class OfflineMode implements IGameMode {
       }
     }
 
+    // Compute combined modifier effect for this turn
+    const modifierEffect = getTurnModifierEffect(offlineState.currentTurn, offlineState.randomModifiers);
+
     const result = calculateTurnScores(
       offlineState.currentTurn,
       placementsRecord,
       offlineState.nationalIndices,
       offlineState.activeTeamCount,
-      cumulativePoints
+      cumulativePoints,
+      modifierEffect
     );
 
     const { newIndices: indicesAfterProject } = applyProjectResult(
@@ -338,7 +354,11 @@ export class OfflineMode implements IGameMode {
       offlineState.nationalIndices
     );
 
-    const { newIndices: finalIndices, boosts } = updateIndicesFromCells(placementsRecord, indicesAfterProject);
+    const { newIndices: finalIndices, boosts } = updateIndicesFromCells(
+      placementsRecord,
+      indicesAfterProject,
+      modifierEffect
+    );
 
     // Apply maintenance (skip on last turn - turn 8 - since game ends)
     if (offlineState.currentTurn < 8) {
@@ -367,6 +387,7 @@ export class OfflineMode implements IGameMode {
     });
 
     // Record turn history for export
+    const currentRandomMod = offlineState.randomModifiers?.[offlineState.currentTurn - 1];
     const historyEntry = {
       turn: offlineState.currentTurn,
       activeTeams: Object.entries(offlineState.teams)
@@ -381,6 +402,8 @@ export class OfflineMode implements IGameMode {
         year: offlineState.currentEvent?.year || 0,
         project: offlineState.currentEvent?.project || ''
       },
+      fixedModifier: offlineState.currentEvent?.fixedModifier,
+      randomModifier: currentRandomMod,
       allocations: placementsRecord as Record<string, Record<string, number>>,
       indicesSnapshot: { ...finalIndices } as Record<string, number>,
       projectSuccess: result.success,

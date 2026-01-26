@@ -180,7 +180,7 @@ export default function OnlineLobby(props: LobbyProps) {
       <div class="relative flex items-center justify-between mb-8">
         <div class="flex items-center gap-4">
           <button
-            onClick={() => history.back()}
+            onClick={() => navigate('/mode')}
             class="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
           >
             <ArrowLeft class="w-5 h-5" />
