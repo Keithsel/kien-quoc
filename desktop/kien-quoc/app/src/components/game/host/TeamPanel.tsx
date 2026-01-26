@@ -5,11 +5,12 @@
  */
 import { For, Show, createMemo, createSignal } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { Wifi, WifiOff, Bot } from 'lucide-solid';
+import { Wifi, WifiOff, Bot, Rocket } from 'lucide-solid';
 import { useGame } from '~/lib/game/context';
 import { REGIONS } from '~/config/regions';
 import { BOARD_CELLS } from '~/config/board';
 import type { CellType } from '~/config/game';
+import { UNDERDOG_START_TURN, UNDERDOG_THRESHOLD } from '~/config/game';
 import { cellTypeIcons } from '~/components/game/play/shared/icons';
 import { cellTypeLabels } from '~/components/game/play/shared/labels';
 
@@ -176,53 +177,72 @@ export default function TeamPanel() {
       <h3 class="font-bold text-gray-700 text-sm mb-3">Đội tham gia</h3>
       <div class="space-y-2">
         <For each={sortedTeams()}>
-          {(team) => (
-            <div
-              class={`p-2 rounded-lg border-2 transition-all ${
-                team.connected ? 'bg-gray-50' : 'bg-gray-50/50 opacity-50'
-              } ${team.submitted ? 'border-green-500' : team.connected ? 'border-gray-200' : 'border-gray-100'}`}
-            >
-              <div class="flex items-center gap-2">
-                {/* Team color badge */}
-                <div
-                  class={`w-8 h-8 ${team.region?.colorClass || 'bg-gray-500'} rounded-lg flex items-center justify-center`}
-                >
-                  <Show
-                    when={team.isBot}
-                    fallback={
-                      team.connected ? <Wifi class="w-4 h-4 text-white" /> : <WifiOff class="w-4 h-4 text-white/50" />
-                    }
+          {(team, index) => {
+            // Determine if this team is an underdog (bottom 40% from turn 5+)
+            const isUnderdog = () => {
+              const turn = game.currentTurn();
+              if (turn < UNDERDOG_START_TURN) return false;
+              const teams = sortedTeams();
+              const underdogCount = Math.floor(teams.length * UNDERDOG_THRESHOLD);
+              return index() >= teams.length - underdogCount;
+            };
+            return (
+              <div
+                class={`p-2 rounded-lg border-2 transition-all ${
+                  team.connected ? 'bg-gray-50' : 'bg-gray-50/50 opacity-50'
+                } ${team.submitted ? 'border-green-500' : team.connected ? 'border-gray-200' : 'border-gray-100'}`}
+              >
+                <div class="flex items-center gap-2">
+                  {/* Team color badge */}
+                  <div
+                    class={`w-8 h-8 ${team.region?.colorClass || 'bg-gray-500'} rounded-lg flex items-center justify-center`}
                   >
-                    <Bot class="w-4 h-4 text-white" />
-                  </Show>
+                    <Show
+                      when={team.isBot}
+                      fallback={
+                        team.connected ? <Wifi class="w-4 h-4 text-white" /> : <WifiOff class="w-4 h-4 text-white/50" />
+                      }
+                    >
+                      <Bot class="w-4 h-4 text-white" />
+                    </Show>
+                  </div>
+
+                  {/* Team info */}
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm text-gray-800 truncate flex items-center gap-1">
+                      {team.region?.name || team.regionId}
+                      <Show when={isUnderdog()}>
+                        <span class="tooltip tooltip-right" data-tip="+1 RP, x1.05 điểm">
+                          <Rocket class="w-3 h-3 text-orange-500" />
+                        </span>
+                      </Show>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {team.isBot ? 'Bot' : team.connected ? 'Online' : 'Offline'}
+                    </div>
+                  </div>
+
+                  {/* Points */}
+                  <div class="text-right">
+                    <div class="font-bold text-lg text-gray-800">{team.points.toFixed(2)}</div>
+                    <div class="text-xs text-gray-500">điểm</div>
+                  </div>
                 </div>
 
-                {/* Team info */}
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm text-gray-800 truncate">{team.region?.name || team.regionId}</div>
-                  <div class="text-xs text-gray-500">{team.isBot ? 'Bot' : team.connected ? 'Online' : 'Offline'}</div>
-                </div>
-
-                {/* Points */}
-                <div class="text-right">
-                  <div class="font-bold text-lg text-gray-800">{team.points.toFixed(2)}</div>
-                  <div class="text-xs text-gray-500">điểm</div>
-                </div>
+                {/* Allocation bars - always show both when there's any allocation */}
+                <Show when={team.allTimeRP > 0}>
+                  <div class="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
+                    {/* Current turn bar */}
+                    <Show when={team.totalRP > 0}>
+                      <AllocationBar allocations={team.currentAllocations} label="Lượt này" />
+                    </Show>
+                    {/* All-time bar (includes current turn) */}
+                    <AllocationBar allocations={team.allTimeAllocations} label="Tổng cộng" />
+                  </div>
+                </Show>
               </div>
-
-              {/* Allocation bars - always show both when there's any allocation */}
-              <Show when={team.allTimeRP > 0}>
-                <div class="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
-                  {/* Current turn bar */}
-                  <Show when={team.totalRP > 0}>
-                    <AllocationBar allocations={team.currentAllocations} label="Lượt này" />
-                  </Show>
-                  {/* All-time bar (includes current turn) */}
-                  <AllocationBar allocations={team.allTimeAllocations} label="Tổng cộng" />
-                </div>
-              </Show>
-            </div>
-          )}
+            );
+          }}
         </For>
       </div>
     </div>

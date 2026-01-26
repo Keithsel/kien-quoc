@@ -5,9 +5,10 @@
  * USES useGame() directly for reactivity
  */
 import { Show, For, createMemo } from 'solid-js';
-import { Target, Trophy, TrendingUp, Star, ChevronRight } from 'lucide-solid';
+import { Target, Trophy, TrendingUp, Star, ChevronRight, Rocket } from 'lucide-solid';
 import { useGame } from '~/lib/game/context';
-import { REGIONS } from '~/config/regions';
+import { REGIONS, type RegionId } from '~/config/regions';
+import { UNDERDOG_START_TURN, UNDERDOG_THRESHOLD } from '~/config/game';
 
 interface RightSidebarProps {
   onProjectClick?: () => void;
@@ -30,6 +31,15 @@ export default function RightSidebar(props: RightSidebarProps) {
       .sort((a, b) => b.points - a.points);
 
     return sorted.map((t, i) => ({ ...t, rank: i + 1 }));
+  });
+
+  // Calculate underdog teams (bottom 40% from turn 5+)
+  const underdogTeams = createMemo(() => {
+    const turn = game.currentTurn();
+    if (turn < UNDERDOG_START_TURN) return new Set<RegionId>();
+    const teams = leaderboard();
+    const underdogCount = Math.floor(teams.length * UNDERDOG_THRESHOLD);
+    return new Set(teams.slice(-underdogCount).map((t) => t.id as RegionId));
   });
 
   return (
@@ -121,7 +131,14 @@ export default function RightSidebar(props: RightSidebarProps) {
 
                   {/* Team name */}
                   <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm text-gray-800 truncate">{region?.name || team.name}</div>
+                    <div class="font-medium text-sm text-gray-800 truncate flex items-center gap-1">
+                      {region?.name || team.name}
+                      <Show when={underdogTeams().has(team.id as RegionId)}>
+                        <span class="tooltip tooltip-left" data-tip="Hỗ trợ vùng khó khăn: +1 RP, x1.05 điểm">
+                          <Rocket class="w-3 h-3 text-orange-500" />
+                        </span>
+                      </Show>
+                    </div>
                     <Show when={isMe}>
                       <div class="text-xs text-red-600 font-medium">Bạn</div>
                     </Show>

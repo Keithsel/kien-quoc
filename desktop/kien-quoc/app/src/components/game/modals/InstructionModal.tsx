@@ -37,7 +37,7 @@ const pages = [
   { title: 'Chào mừng đến Kiến Quốc Ký', subtitle: 'Hướng dẫn cơ bản' },
   { title: 'Mục tiêu trò chơi', subtitle: 'Xây dựng quốc gia' },
   { title: '6 Chỉ số Quốc gia', subtitle: 'Sức mạnh của dân tộc' },
-  { title: '5 Loại ô trên bàn chơi', subtitle: 'Chiến lược phân bổ' },
+  { title: '5 Loại ô trên bàn chơi', subtitle: 'Chiến lược phân bố' },
   { title: '4 Giai đoạn mỗi lượt', subtitle: 'Vòng lượt chơi' }
 ];
 
@@ -75,7 +75,7 @@ const phases = [
     hasTimer: true,
     time: PHASE_DURATIONS.action,
     color: 'bg-green-500',
-    desc: 'Phân bổ tài nguyên (có đếm ngược)',
+    desc: 'Phân bố tài nguyên (có đếm ngược)',
     icon: Layers
   },
   {
@@ -115,7 +115,7 @@ export default function InstructionModal(props: InstructionModalProps) {
         </div>
 
         {/* Content - fixed height for consistency */}
-        <div class="p-6 h-[420px] overflow-y-auto">
+        <div class="p-6 h-[500px] overflow-y-auto">
           {/* Page 0: Welcome */}
           <Show when={currentPage() === 0}>
             <div class="text-center space-y-6">
@@ -128,7 +128,7 @@ export default function InstructionModal(props: InstructionModalProps) {
                   <strong> Đổi Mới</strong> của Việt Nam (1986-2007).
                 </p>
                 <p class="text-gray-600">
-                  Các vùng miền cùng phân bổ tài nguyên để hoàn thành các dự án quốc gia và duy trì sức mạnh đất nước
+                  Các vùng miền cùng phân bố tài nguyên để hoàn thành các dự án quốc gia và duy trì sức mạnh đất nước
                   qua 6 chỉ số.
                 </p>
               </div>
@@ -201,6 +201,17 @@ export default function InstructionModal(props: InstructionModalProps) {
                   </p>
                 </div>
               </div>
+
+              <div class="p-4 bg-orange-50 rounded-xl flex items-start gap-3">
+                <Star class="w-5 h-5 text-orange-600" />
+                <div>
+                  <div class="font-bold text-orange-700 text-sm">Hỗ trợ vùng khó khăn</div>
+                  <p class="text-sm text-gray-600">
+                    Từ lượt 5, các đội top dưới 40% được hỗ trợ thêm RP và điểm để có sức 
+                    bật với các khu vực mạnh hơn.
+                  </p>
+                </div>
+              </div>
             </div>
           </Show>
 
@@ -232,7 +243,7 @@ export default function InstructionModal(props: InstructionModalProps) {
                 <div class="p-3 bg-blue-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
                   <Lightbulb class="w-4 h-4 text-blue-600 shrink-0" />
                   <span>
-                    Phân bổ vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (không cần dự án thành công)
+                    Phân bố vào <strong>ô có chỉ số tương ứng</strong> để tăng chỉ số đó (không cần dự án thành công)
                   </span>
                 </div>
                 <div class="p-3 bg-amber-50 rounded-xl text-center text-sm text-gray-600 flex items-center justify-center gap-2">
@@ -249,7 +260,7 @@ export default function InstructionModal(props: InstructionModalProps) {
           <Show when={currentPage() === 3}>
             <div class="space-y-4">
               <p class="text-gray-600 text-sm">
-                Bàn chơi 4x4 với 5 loại ô. Mỗi đội có <strong>{RESOURCES_PER_TURN} điểm</strong> tài nguyên để phân bổ.
+                Bàn chơi 4x4 với 5 loại ô. Mỗi đội có <strong>{RESOURCES_PER_TURN} điểm</strong> tài nguyên để phân bố.
               </p>
               <div class="space-y-2">
                 <For each={cellTypes}>
