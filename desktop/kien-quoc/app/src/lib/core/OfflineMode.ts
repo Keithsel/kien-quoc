@@ -316,11 +316,20 @@ export class OfflineMode implements IGameMode {
     // Cast to full Record - functions handle missing entries gracefully
     const placementsRecord = allPlacements as Record<RegionId, Placements>;
 
+    // Build cumulative points for underdog calculation
+    const cumulativePoints: Record<RegionId, number> = {} as Record<RegionId, number>;
+    for (const [regionId, team] of Object.entries(offlineState.teams)) {
+      if (team.ownerId !== null) {
+        cumulativePoints[regionId as RegionId] = team.points;
+      }
+    }
+
     const result = calculateTurnScores(
       offlineState.currentTurn,
       placementsRecord,
       offlineState.nationalIndices,
-      offlineState.activeTeamCount
+      offlineState.activeTeamCount,
+      cumulativePoints
     );
 
     const { newIndices: indicesAfterProject } = applyProjectResult(
@@ -363,7 +372,10 @@ export class OfflineMode implements IGameMode {
       activeTeams: Object.entries(offlineState.teams)
         .filter(([, t]) => t.ownerId !== null)
         .map(([id]) => id as RegionId),
-      teamFormationSummary: `${Object.values(offlineState.teams).filter((t) => t.ownerId !== null).length} teams (${Object.values(offlineState.teams).filter((t) => t.ownerId === 'player').length} Human, ${Object.values(offlineState.teams).filter((t) => t.isAI).length} AI)`,
+      teamFormationSummary: Object.values(offlineState.teams)
+        .filter((t) => t.ownerId !== null)
+        .map((t) => `${t.name}${t.isAI ? ' (AI)' : ''}`)
+        .join(', '),
       event: {
         name: offlineState.currentEvent?.name || '',
         year: offlineState.currentEvent?.year || 0,

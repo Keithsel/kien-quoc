@@ -538,12 +538,21 @@ export class OnlineMode implements IGameMode {
       }
     }
 
+    // Build cumulative points for underdog calculation
+    const cumulativePoints: Record<RegionId, number> = {} as Record<RegionId, number>;
+    for (const [regionId, team] of Object.entries(data.teams) as [string, FirebaseTeam][]) {
+      if ((team.ownerId && team.connected) || team.isAI) {
+        cumulativePoints[regionId as RegionId] = team.points;
+      }
+    }
+
     // Calculate scores
     const result = calculateTurnScores(
       data.currentTurn,
       allPlacements as Record<RegionId, Record<string, number>>,
       data.nationalIndices as NationalIndices,
-      data.turnActiveTeams
+      data.turnActiveTeams,
+      cumulativePoints
     );
 
     // Apply project result
@@ -624,7 +633,10 @@ export class OnlineMode implements IGameMode {
       activeTeams: Object.entries(data.teams)
         .filter(([, t]) => (t.ownerId && t.connected) || t.isAI)
         .map(([id]) => id as RegionId),
-      teamFormationSummary: `${Object.values(data.teams).filter((t) => (t.ownerId && t.connected) || t.isAI).length} teams (${Object.values(data.teams).filter((t) => t.ownerId && t.connected && !t.isAI).length} Human, ${Object.values(data.teams).filter((t) => t.isAI).length} AI)`,
+      teamFormationSummary: Object.values(data.teams)
+        .filter((t: any) => (t.ownerId && t.connected) || t.isAI)
+        .map((t: any) => `${t.name}${t.isAI ? ' (AI)' : ''}`)
+        .join(', '),
       event: {
         name: data.currentEvent?.name || '',
         year: data.currentEvent?.year || 0,

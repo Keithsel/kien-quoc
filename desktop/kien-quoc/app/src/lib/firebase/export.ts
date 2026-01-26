@@ -15,7 +15,11 @@ import {
   SYNERGY_FREE_PARTICIPANTS,
   COMPETITIVE_LOSER_MULTIPLIER,
   REGION_SPECIALIZATION_MULTIPLIER,
-  INDEX_BOOST_DIVISOR
+  INDEX_BOOST_DIVISOR,
+  UNDERDOG_BONUS_RP,
+  UNDERDOG_MULTIPLIER,
+  UNDERDOG_START_TURN,
+  UNDERDOG_THRESHOLD
 } from '~/config/game';
 import type { TurnHistoryEntry } from '~/lib/firebase/types';
 
@@ -31,6 +35,12 @@ interface ExportedGameHistory {
     initialIndices: Record<string, number>;
     regionSpecializationMultiplier: number;
     indexBoostDivisor: number;
+    underdogMechanic: {
+      bonusRP: number;
+      multiplier: number;
+      startTurn: number;
+      threshold: number;
+    };
     // Human-readable scoring formulas
     scoringRules: Record<string, string>;
   };
@@ -107,6 +117,12 @@ export function exportGameHistory(): ExportedGameHistory | null {
         initialIndices: INITIAL_INDICES as Record<string, number>,
         regionSpecializationMultiplier: REGION_SPECIALIZATION_MULTIPLIER,
         indexBoostDivisor: INDEX_BOOST_DIVISOR,
+        underdogMechanic: {
+          bonusRP: UNDERDOG_BONUS_RP,
+          multiplier: UNDERDOG_MULTIPLIER,
+          startTurn: UNDERDOG_START_TURN,
+          threshold: UNDERDOG_THRESHOLD
+        },
         scoringRules: {
           competitive: `Winner: max(RP) x ${CELL_MULTIPLIERS.competitive}. Losers: RP x ${COMPETITIVE_LOSER_MULTIPLIER}. Ties split.`,
           synergy: `All get: RP x ${CELL_MULTIPLIERS.synergy} x (${SYNERGY_BASE} + ${SYNERGY_SCALING} x (participants - ${SYNERGY_FREE_PARTICIPANTS}))`,
@@ -114,7 +130,8 @@ export function exportGameHistory(): ExportedGameHistory | null {
           cooperation: `If 2+ teams: RP x ${CELL_MULTIPLIERS.cooperation}. Solo = 0 points.`,
           project: `RP x ${CELL_MULTIPLIERS.project} (base points) + bonus from project success`,
           regionSpecialization: `If team invests in a cell matching their region's specialization, they get a x${REGION_SPECIALIZATION_MULTIPLIER} bonus.`,
-          indexBoosts: `Every ${INDEX_BOOST_DIVISOR} RP invested in a cell gives +1 to its associated national indices.`
+          indexBoosts: `Every ${INDEX_BOOST_DIVISOR} RP invested in a cell gives +1 to its associated national indices.`,
+          underdog: `From turn ${UNDERDOG_START_TURN}+, bottom ${UNDERDOG_THRESHOLD * 100}% teams get +${UNDERDOG_BONUS_RP} RP and x${UNDERDOG_MULTIPLIER} score multiplier.`
         }
       },
       meta: {
