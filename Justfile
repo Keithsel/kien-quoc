@@ -3,7 +3,7 @@
 # -------------------------
 
 # Paths
-APP_DIR := "desktop/kien-quoc/app"
+APP_DIR := "."
 REQUIRED_CMDS := "bun firebase cargo"
 
 # --------------
@@ -100,7 +100,7 @@ precommit: format lint typecheck
 # Build and deploy to Firebase Hosting
 [group('dev')]
 deploy: build
-  cd desktop/kien-quoc && firebase deploy --only hosting
+  firebase deploy --only hosting
 
 # -------------------
 # Tauri Commands
