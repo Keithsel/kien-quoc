@@ -10,6 +10,7 @@ import type { RegionId } from '~/config/regions';
 import type { NationalIndices, Placements } from './types';
 import type { TurnEvent } from '~/config/events';
 import { RealisticAdaptiveAgent } from '~/lib/ai';
+import { getTeamRpForTurn } from '~/lib/scoring';
 
 // ============================================================================
 // SINGLETON AI AGENT STORAGE
@@ -87,6 +88,7 @@ export function hasAgent(regionId: RegionId): boolean {
 
 /**
  * Generate placements for a single AI agent.
+ * @param resources - Optional custom RP for this team (includes underdog bonus)
  */
 export function generatePlacement(
   regionId: RegionId,
@@ -94,15 +96,17 @@ export function generatePlacement(
   teamScore: number,
   avgScore: number,
   nationalIndices: NationalIndices,
-  event: TurnEvent
+  event: TurnEvent,
+  resources?: number
 ): Placements {
   const agent = getOrCreateAgent(regionId);
-  return agent.generatePlacements(turn, teamScore, avgScore, nationalIndices, event);
+  return agent.generatePlacements(turn, teamScore, avgScore, nationalIndices, event, resources);
 }
 
 /**
  * Generate placements for all AI agents.
  * Returns a map of regionId to placements.
+ * Automatically calculates underdog bonus for each AI team.
  */
 export function generateAllPlacements(
   turn: number,
@@ -118,7 +122,9 @@ export function generateAllPlacements(
 
   for (const regionId of aiAgents.keys()) {
     const teamScore = teamScores[regionId] ?? 0;
-    result[regionId] = generatePlacement(regionId, turn, teamScore, avgScore, nationalIndices, event);
+    // Calculate team-specific RP (includes underdog bonus)
+    const resources = getTeamRpForTurn(regionId, teamScores, turn);
+    result[regionId] = generatePlacement(regionId, turn, teamScore, avgScore, nationalIndices, event, resources);
   }
 
   return result;

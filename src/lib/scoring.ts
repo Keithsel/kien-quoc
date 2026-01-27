@@ -14,7 +14,8 @@ import {
   UNDERDOG_THRESHOLD,
   SOLO_PENALTY_COMPETITIVE,
   SOLO_PENALTY_SYNERGY,
-  SOLO_PENALTY_COOPERATION
+  SOLO_PENALTY_COOPERATION,
+  RESOURCES_PER_TURN
 } from '~/config/game';
 import { BOARD_CELLS, PROJECT_CELLS } from '~/config/board';
 import { TURN_EVENTS, getScaledRequirements, type ModifierEffect } from '~/config/events';
@@ -41,6 +42,22 @@ export function getUnderdogTeams(teamPoints: Record<RegionId, number>, turn: num
   }
 
   return underdogs;
+}
+
+/**
+ * Get the RP allocation for a team this turn.
+ * Underdogs get bonus RP: +1 from turn 3, +2 from turn 6.
+ */
+export function getTeamRpForTurn(
+  teamId: RegionId,
+  teamPoints: Record<RegionId, number>,
+  turn: number,
+  baseRp: number = RESOURCES_PER_TURN
+): number {
+  const underdogs = getUnderdogTeams(teamPoints, turn);
+  const tier = underdogs.get(teamId) || 0;
+  if (tier === 0) return baseRp;
+  return baseRp + (tier === 2 ? UNDERDOG_RP_TIER2 : UNDERDOG_RP_TIER1);
 }
 
 /**
@@ -284,11 +301,8 @@ export function calculateTurnScores(
     }
   }
 
-  // 7. Apply underdog RP bonus (tier 1: +1 RP from turn 3, tier 2: +2 RP from turn 6)
-  for (const [teamId, tier] of underdogs.entries()) {
-    const bonusRP = tier === 2 ? UNDERDOG_RP_TIER2 : UNDERDOG_RP_TIER1;
-    teamPoints[teamId] = (teamPoints[teamId] || 0) + bonusRP;
-  }
+  // Note: Underdog RP bonus is applied during allocation phase (getTeamRpForTurn),
+  // not here. Tier 2 underdogs still get the 5% score multiplier applied in step 4.
 
   return {
     success,

@@ -41,6 +41,7 @@ import {
   getOrCreateAgent,
   clearAllAgents
 } from '~/lib/domain';
+import { getTeamRpForTurn } from '~/lib/scoring';
 
 const GAME_PATH = 'game';
 
@@ -503,9 +504,19 @@ export class OnlineMode implements IGameMode {
     const activeTeams = allTeams.filter((t) => t.connected || t.isAI);
     const avgScore = activeTeams.reduce((sum, t) => sum + t.points, 0) / activeTeams.length;
 
+    // Build cumulative points for underdog calculation
+    const cumulativePoints: Partial<Record<RegionId, number>> = {};
+    for (const [regionId, t] of Object.entries(data.teams)) {
+      if ((t as FirebaseTeam).connected || (t as FirebaseTeam).isAI) {
+        cumulativePoints[regionId as RegionId] = (t as FirebaseTeam).points;
+      }
+    }
+
     for (const [regionId, team] of aiTeams) {
       try {
         const agent = getOrCreateAgent(regionId as RegionId);
+        // Calculate team-specific RP (includes underdog bonus)
+        const resources = getTeamRpForTurn(regionId as RegionId, cumulativePoints as Record<RegionId, number>, data.currentTurn);
 
         const event = TURN_EVENTS.find((e) => e.turn === data.currentTurn) || TURN_EVENTS[0];
         const placements = agent.generatePlacements(
@@ -513,7 +524,8 @@ export class OnlineMode implements IGameMode {
           team.points,
           avgScore,
           data.nationalIndices as NationalIndices,
-          event
+          event,
+          resources
         );
 
         await update(ref(db!, `${GAME_PATH}/teams/${regionId}`), {

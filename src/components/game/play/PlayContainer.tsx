@@ -9,10 +9,12 @@ import { createSignal, createMemo, createEffect, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import type { BoardCell } from '~/config/board';
 import { PROJECT_CELLS } from '~/config/board';
+import type { RegionId } from '~/config/regions';
 import { getRegion } from '~/config/regions';
 import { useGame } from '~/lib/game/context';
 import { usePlacement, usePhaseAnimations, useTimer } from '~/lib/game/hooks';
 import { getGameFacade, resetGameFacade } from '~/lib/core';
+import { getTeamRpForTurn } from '~/lib/scoring';
 import { Pause } from 'lucide-solid';
 
 import PlayHeader from './PlayHeader';
@@ -25,6 +27,21 @@ export default function PlayContainer() {
   const navigate = useNavigate();
   const game = useGame();
 
+  // Calculate team-specific RP (includes underdog bonus)
+  const teamMaxRP = createMemo(() => {
+    const myTeamId = game.myTeamId();
+    if (!myTeamId) return 14;
+
+    const teams = game.teams();
+    const cumulativePoints: Partial<Record<RegionId, number>> = {};
+    for (const [regionId, team] of Object.entries(teams)) {
+      if (team.ownerId !== null) {
+        cumulativePoints[regionId as RegionId] = team.points;
+      }
+    }
+    return getTeamRpForTurn(myTeamId, cumulativePoints as Record<RegionId, number>, game.currentTurn());
+  });
+
   // UI state
   const [selectedCell, setSelectedCell] = createSignal<BoardCell | null>(null);
   const [showCellModal, setShowCellModal] = createSignal(false);
@@ -32,8 +49,8 @@ export default function PlayContainer() {
   const [showInstructions, setShowInstructions] = createSignal(false);
   const [originalPlacement, setOriginalPlacement] = createSignal(0); // For cancel revert
 
-  // Hooks
-  const placement = usePlacement();
+  // Hooks - pass reactive maxRP for underdog bonus
+  const placement = usePlacement(teamMaxRP);
   const animations = usePhaseAnimations(game.currentPhase);
   const facade = getGameFacade();
   // Get pausedRemainingMs from state for proper timer display during pause
@@ -217,6 +234,7 @@ export default function PlayContainer() {
         <LeftSidebar
           usedResources={placement.used()}
           remainingResources={placement.remaining()}
+          maxRP={teamMaxRP()}
           onSubmit={handleSubmit}
           onCancelSubmission={handleCancelSubmission}
           onClearAll={() => placement.reset()}

@@ -8,8 +8,9 @@
 import type { IGameMode, GameStateDTO, GameInitParams, Team, Placements, TurnEvent } from './GameMode';
 import type { RegionId } from '~/config/regions';
 import { REGIONS } from '~/config/regions';
-import { PHASE_ORDER, RESOURCES_PER_TURN, MAX_TURNS } from '~/config/game';
+import { PHASE_ORDER, MAX_TURNS } from '~/config/game';
 import { RANDOM_MODIFIER_POOL, type RandomModifierId } from '~/config/events';
+import { getTeamRpForTurn } from '~/lib/scoring';
 
 import {
   offlineState,
@@ -84,8 +85,17 @@ export class OfflineMode implements IGameMode {
     const team = offlineState.teams[teamId];
     if (!team || team.submitted) return;
 
+    // Calculate team-specific RP limit (includes underdog bonus)
+    const cumulativePoints: Partial<Record<RegionId, number>> = {};
+    for (const [regionId, t] of Object.entries(offlineState.teams)) {
+      if (t.ownerId !== null) {
+        cumulativePoints[regionId as RegionId] = t.points;
+      }
+    }
+    const maxRP = getTeamRpForTurn(teamId, cumulativePoints as Record<RegionId, number>, offlineState.currentTurn);
+
     const total = Object.values(placements).reduce((a, b) => a + b, 0);
-    if (total > RESOURCES_PER_TURN) return;
+    if (total > maxRP) return;
 
     const tx = createTransaction();
     tx.update(`teams.${teamId}`, { placements, submitted: true });

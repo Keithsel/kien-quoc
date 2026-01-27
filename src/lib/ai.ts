@@ -51,15 +51,16 @@ export class RealisticAdaptiveAgent {
 
   /**
    * Decide resource allocation for this turn
+   * @param resources - Total RP available (may include underdog bonus)
    */
   decideAllocation(
     turn: number,
     myScore: number,
     avgScore: number,
     nationalIndices: NationalIndices,
-    event: TurnEvent
+    event: TurnEvent,
+    resources: number = RESOURCES_PER_TURN
   ): AllocationByType {
-    const resources = RESOURCES_PER_TURN;
     const allocation: AllocationByType = {
       project: 0,
       competitive: 0,
@@ -251,9 +252,10 @@ export class RealisticAdaptiveAgent {
     myScore: number,
     avgScore: number,
     nationalIndices: NationalIndices,
-    event: TurnEvent
+    event: TurnEvent,
+    resources: number = RESOURCES_PER_TURN
   ): Placements {
-    const allocation = this.decideAllocation(turn, myScore, avgScore, nationalIndices, event);
+    const allocation = this.decideAllocation(turn, myScore, avgScore, nationalIndices, event, resources);
     return this.distributeToCells(allocation, nationalIndices);
   }
 }

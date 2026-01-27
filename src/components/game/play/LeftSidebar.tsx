@@ -14,6 +14,7 @@ import { INDEX_ICONS, INDEX_COLORS } from '~/components/game/shared';
 interface LeftSidebarProps {
   usedResources: number;
   remainingResources: number;
+  maxRP: number;
   onSubmit: () => void;
   onCancelSubmission: () => void;
   onClearAll: () => void;
@@ -61,7 +62,12 @@ export default function LeftSidebar(props: LeftSidebarProps) {
             <div class="space-y-3">
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">Tổng</span>
-                <span class="font-bold text-gray-800">{RESOURCES_PER_TURN} RP</span>
+                <span class="font-bold text-gray-800">
+                  {props.maxRP} RP
+                  <Show when={props.maxRP > RESOURCES_PER_TURN}>
+                    <span class="text-xs text-green-600 ml-1">(+{props.maxRP - RESOURCES_PER_TURN})</span>
+                  </Show>
+                </span>
               </div>
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">Đã dùng</span>
@@ -78,7 +84,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                 <div
                   class="h-full bg-linear-to-r from-red-500 to-amber-500 transition-all duration-300"
-                  style={{ width: `${Math.min(100, (props.usedResources / RESOURCES_PER_TURN) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (props.usedResources / props.maxRP) * 100)}%` }}
                 />
               </div>
               {/* Submit/Cancel/Timeout state */}

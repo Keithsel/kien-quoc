@@ -2,7 +2,7 @@
  * Game Hooks
  * Reusable hooks for placement management and phase animations
  */
-import { createSignal, createMemo, createEffect, onCleanup } from 'solid-js';
+import { createSignal, createMemo, createEffect, onCleanup, type Accessor } from 'solid-js';
 import type { Placements } from '~/lib/types';
 import type { PhaseName } from '~/config/game';
 import { RESOURCES_PER_TURN } from '~/config/game';
@@ -10,12 +10,15 @@ import { BOARD_CELLS } from '~/config/board';
 
 /**
  * Hook for managing draft placements during action phase
+ * @param maxRP - Maximum RP for this team (defaults to RESOURCES_PER_TURN, can be reactive accessor for underdog bonus)
  */
-export function usePlacement() {
+export function usePlacement(maxRP?: number | Accessor<number>) {
   const [draft, setDraft] = createSignal<Placements>({});
 
+  const getMaxRP = () => (typeof maxRP === 'function' ? maxRP() : maxRP ?? RESOURCES_PER_TURN);
+
   const used = createMemo(() => Object.values(draft()).reduce((a, b) => a + b, 0));
-  const remaining = createMemo(() => RESOURCES_PER_TURN - used());
+  const remaining = createMemo(() => getMaxRP() - used());
 
   function update(cellId: string, delta: number) {
     const current = draft()[cellId] || 0;
@@ -47,7 +50,7 @@ export function usePlacement() {
     setDraft({ ...placements });
   }
 
-  return { draft, used, remaining, update, get, reset, loadFrom };
+  return { draft, used, remaining, update, get, reset, loadFrom, maxRP: getMaxRP };
 }
 
 /**

@@ -528,6 +528,7 @@ export async function updateAIPlacements(regionId: RegionId, placements: Record<
 }
 
 import { getOrCreateAgent, clearAllAgents } from '~/lib/domain';
+import { getTeamRpForTurn } from '~/lib/scoring';
 
 export async function runAITurns(): Promise<void> {
   const game = await readGame();
@@ -543,14 +544,24 @@ export async function runAITurns(): Promise<void> {
 
   if (aiTeams.length === 0) return;
 
-  // Calculate average score
+  // Calculate average score and build cumulative points for underdog calculation
   const allTeams = Object.values(game.teams).filter((t) => t.connected || t.isAI);
   const avgScore = allTeams.reduce((sum, t) => sum + t.points, 0) / allTeams.length;
+  
+  const cumulativePoints: Partial<Record<RegionId, number>> = {};
+  for (const [regionId, t] of Object.entries(game.teams)) {
+    if ((t as OnlineTeam).connected || (t as OnlineTeam).isAI) {
+      cumulativePoints[regionId as RegionId] = (t as OnlineTeam).points;
+    }
+  }
 
   // Process each AI team
   for (const [regionId, team] of aiTeams) {
     // Get or create agent from domain
     const agent = getOrCreateAgent(regionId);
+    
+    // Calculate team-specific RP (includes underdog bonus)
+    const resources = getTeamRpForTurn(regionId, cumulativePoints as Record<RegionId, number>, game.currentTurn);
 
     // Get event for current turn
     const { TURN_EVENTS } = await import('~/config/events');
@@ -562,7 +573,8 @@ export async function runAITurns(): Promise<void> {
       team.points,
       avgScore,
       game.nationalIndices as import('~/lib/types').NationalIndices,
-      event
+      event,
+      resources
     );
 
     // Submit AI placements
