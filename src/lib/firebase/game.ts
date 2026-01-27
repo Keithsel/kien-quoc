@@ -574,7 +574,8 @@ export async function runAITurns(): Promise<void> {
       avgScore,
       game.nationalIndices as import('~/lib/types').NationalIndices,
       event,
-      resources
+      resources,
+      allTeams.length
     );
 
     // Submit AI placements

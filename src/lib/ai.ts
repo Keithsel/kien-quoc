@@ -1,7 +1,8 @@
-import { RESOURCES_PER_TURN, type CellType, type IndexName } from '~/config/game';
+import { RESOURCES_PER_TURN, MAX_TURNS, type CellType, type IndexName } from '~/config/game';
 import { getCellsByType, PROJECT_CELLS } from '~/config/board';
 import type { NationalIndices, Placements } from './types';
 import type { TurnEvent } from '~/config/events';
+import { FIXED_MODIFIERS, type FixedModifierId } from '~/config/events';
 import { REGION_MAP, type RegionId } from '~/config/regions';
 
 interface AllocationByType {
@@ -52,6 +53,7 @@ export class RealisticAdaptiveAgent {
   /**
    * Decide resource allocation for this turn
    * @param resources - Total RP available (may include underdog bonus)
+   * @param activeTeams - Number of active teams for project estimation
    */
   decideAllocation(
     turn: number,
@@ -59,7 +61,8 @@ export class RealisticAdaptiveAgent {
     avgScore: number,
     nationalIndices: NationalIndices,
     event: TurnEvent,
-    resources: number = RESOURCES_PER_TURN
+    resources: number = RESOURCES_PER_TURN,
+    activeTeams: number = 6
   ): AllocationByType {
     const allocation: AllocationByType = {
       project: 0,
@@ -69,88 +72,163 @@ export class RealisticAdaptiveAgent {
       cooperation: 0
     };
 
-    // Check survival mode - trigger earlier and be more aggressive
+    // === IMPROVEMENT #3: Predictive Index Maintenance ===
+    // Check which indices will collapse soon (accounting for -1/turn maintenance)
     const minIndex = Math.min(...Object.values(nationalIndices));
-    if (minIndex <= 2) {
-      // Critical mode - heavy project focus
+    const turnsRemaining = MAX_TURNS - turn;
+    const predictedMinAtEnd = minIndex - turnsRemaining; // Indices drop by 1 each turn
+    
+    if (minIndex <= 2 || predictedMinAtEnd <= 0) {
+      // Critical mode - heavy project focus to boost indices
       this.survivalMode = true;
-      this.projectPriority = 0.55; // Nerfed from 0.70
-    } else if (minIndex <= 5) {
+      this.projectPriority = 0.55;
+    } else if (minIndex <= 4 || predictedMinAtEnd <= 2) {
       // Survival mode - increased project priority
       this.survivalMode = true;
-      this.projectPriority = Math.min(0.45, this.projectPriority + 0.08); // Nerfed from 0.60/0.10
+      this.projectPriority = Math.min(0.45, this.projectPriority + 0.08);
     } else if (minIndex >= 8) {
       this.survivalMode = false;
       this.projectPriority = Math.max(0.25, this.projectPriority - 0.02);
     }
 
+    // === IMPROVEMENT #2: Smart Project Contribution ===
+    // Estimate if project will succeed and adjust contribution
+    const scaledMinTotal = Math.ceil(event.minTotal * (activeTeams / 6));
+    const expectedProjectRPPerTeam = 4; // Average ~4 RP per team to project
+    const expectedTotalProjectRP = activeTeams * expectedProjectRPPerTeam;
+    const projectLikelyToSucceed = expectedTotalProjectRP >= scaledMinTotal * 0.9;
+    
+    // Calculate fair share for project
+    const fairShareProject = Math.ceil(scaledMinTotal / activeTeams);
+    
     let projectPct: number;
     let competitivePct: number;
     let cooperativePct: number;
 
-    // Personality-based behavior from Turn 1 (no more generic early game)
-    switch (this.personality) {
-      case 'aggressive':
-        // Heavy competitive focus, minimal cooperation
-        this.currentTendency = Math.max(0.1, this.baseTendency - turn * 0.02);
-        projectPct = 0.2 + Math.random() * 0.1; // 20-30% project
-        competitivePct = 0.45 + Math.random() * 0.15; // 45-60% competitive
-        cooperativePct = 1.0 - projectPct - competitivePct; // Rest to coop
-        break;
+    // === IMPROVEMENT #1: Use Event Modifiers ===
+    // Adjust strategy based on turn's fixed modifier
+    const fixedMod = FIXED_MODIFIERS[event.fixedModifier as FixedModifierId];
+    const cellBoosts = fixedMod?.effect?.cellMultipliers || {};
+    const hasSynergyBoost = (cellBoosts.synergy ?? 1) > 1;
+    const hasCompetitiveBoost = (cellBoosts.competitive ?? 1) > 1;
+    const hasCooperationBoost = (cellBoosts.cooperation ?? 1) > 1;
+    const hasIndependentBoost = (cellBoosts.independent ?? 1) > 1;
+    const hasProjectBoost = (fixedMod?.effect?.projectRpMultiplier ?? 1) > 1;
 
-      case 'cooperative':
-        // Heavy synergy/cooperation focus, minimal competitive
-        this.currentTendency = Math.min(0.95, this.baseTendency + turn * 0.02);
-        projectPct = 0.3 + Math.random() * 0.1; // 30-40% project (more civic-minded)
-        cooperativePct = 0.45 + Math.random() * 0.15; // 45-60% cooperative
-        competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct); // Minimal competitive
-        break;
+    // === IMPROVEMENT #4: Turn-Aware Strategy (triggered randomly in last turns) ===
+    const isLastTurns = turn >= MAX_TURNS - 1; // Turn 7-8
+    const shouldMaximizePoints = isLastTurns && Math.random() < 0.6; // 60% chance to play aggressive in endgame
 
-      case 'opportunist':
-        // Flip between extremes each turn
-        if (Math.random() < 0.5) {
-          // Aggressive turn
-          this.currentTendency = 0.15 + Math.random() * 0.15;
-          projectPct = 0.15;
-          competitivePct = 0.5 + Math.random() * 0.2;
-          cooperativePct = 1.0 - projectPct - competitivePct;
-        } else {
-          // Cooperative turn
-          this.currentTendency = 0.75 + Math.random() * 0.15;
-          projectPct = 0.35;
-          cooperativePct = 0.5 + Math.random() * 0.15;
+    if (shouldMaximizePoints && !this.survivalMode) {
+      // Endgame: maximize points, indices matter less
+      projectPct = 0.1 + Math.random() * 0.1; // 10-20% minimum to project
+      competitivePct = 0.5 + Math.random() * 0.2; // 50-70% to competitive for points
+      cooperativePct = 1.0 - projectPct - competitivePct;
+    } else {
+      // Normal personality-based behavior with modifier awareness
+      switch (this.personality) {
+        case 'aggressive':
+          this.currentTendency = Math.max(0.1, this.baseTendency - turn * 0.02);
+          projectPct = projectLikelyToSucceed ? 0.15 : Math.min(0.35, fairShareProject / resources);
+          
+          // Lean into competitive if boosted
+          if (hasCompetitiveBoost) {
+            competitivePct = 0.55 + Math.random() * 0.15; // 55-70%
+          } else {
+            competitivePct = 0.45 + Math.random() * 0.15; // 45-60%
+          }
+          cooperativePct = Math.max(0, 1.0 - projectPct - competitivePct);
+          break;
+
+        case 'cooperative':
+          this.currentTendency = Math.min(0.95, this.baseTendency + turn * 0.02);
+          projectPct = hasProjectBoost ? 0.4 : 0.3 + Math.random() * 0.1;
+          
+          // Lean into synergy/coop if boosted
+          if (hasSynergyBoost || hasCooperationBoost) {
+            cooperativePct = 0.55 + Math.random() * 0.15; // 55-70%
+          } else {
+            cooperativePct = 0.45 + Math.random() * 0.15; // 45-60%
+          }
           competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
-        }
-        break;
+          break;
 
-      case 'balanced':
-      default: {
-        // Adapt based on score difference
-        if (myScore < avgScore * 0.85) {
-          // Behind: be more cooperative to catch up via synergy
-          this.currentTendency = Math.min(0.8, this.currentTendency + 0.15);
-        } else if (myScore > avgScore * 1.15) {
-          // Ahead: be more competitive to maintain lead
-          this.currentTendency = Math.max(0.25, this.currentTendency - 0.1);
+        case 'opportunist':
+          // Flip between extremes but consider modifiers
+          if (hasCompetitiveBoost || hasIndependentBoost) {
+            // Go aggressive when competitive cells are boosted
+            this.currentTendency = 0.15 + Math.random() * 0.15;
+            projectPct = 0.15;
+            competitivePct = 0.5 + Math.random() * 0.2;
+            cooperativePct = 1.0 - projectPct - competitivePct;
+          } else if (hasSynergyBoost || hasCooperationBoost) {
+            // Go cooperative when synergy/coop cells are boosted
+            this.currentTendency = 0.75 + Math.random() * 0.15;
+            projectPct = 0.35;
+            cooperativePct = 0.5 + Math.random() * 0.15;
+            competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+          } else {
+            // Random flip
+            if (Math.random() < 0.5) {
+              this.currentTendency = 0.15 + Math.random() * 0.15;
+              projectPct = 0.15;
+              competitivePct = 0.5 + Math.random() * 0.2;
+              cooperativePct = 1.0 - projectPct - competitivePct;
+            } else {
+              this.currentTendency = 0.75 + Math.random() * 0.15;
+              projectPct = 0.35;
+              cooperativePct = 0.5 + Math.random() * 0.15;
+              competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+            }
+          }
+          break;
+
+        case 'balanced':
+        default: {
+          // Adapt based on score difference
+          if (myScore < avgScore * 0.85) {
+            this.currentTendency = Math.min(0.8, this.currentTendency + 0.15);
+          } else if (myScore > avgScore * 1.15) {
+            this.currentTendency = Math.max(0.25, this.currentTendency - 0.1);
+          }
+          
+          // Smart project contribution
+          if (!projectLikelyToSucceed && !this.survivalMode) {
+            // Project unlikely to succeed - contribute fair share or less
+            projectPct = Math.max(0.1, (fairShareProject * 0.8) / resources);
+          } else {
+            projectPct = this.projectPriority;
+          }
+          
+          const remaining = 1.0 - projectPct;
+          
+          // Adjust for modifier boosts
+          let competitiveWeight = 1 - this.currentTendency;
+          let cooperativeWeight = this.currentTendency;
+          
+          if (hasCompetitiveBoost || hasIndependentBoost) competitiveWeight *= 1.3;
+          if (hasSynergyBoost || hasCooperationBoost) cooperativeWeight *= 1.3;
+          
+          const totalWeight = competitiveWeight + cooperativeWeight;
+          competitivePct = remaining * (competitiveWeight / totalWeight);
+          cooperativePct = remaining * (cooperativeWeight / totalWeight);
+          break;
         }
-        projectPct = this.projectPriority;
-        const remaining = 1.0 - projectPct;
-        competitivePct = remaining * (1 - this.currentTendency);
-        cooperativePct = remaining * this.currentTendency;
-        break;
       }
     }
 
     // Allocate resources with personality-influenced distribution
     allocation.project = Math.floor(resources * projectPct);
 
-    // Competitive pool
-    allocation.competitive = Math.floor(resources * competitivePct * 0.7); // 70% of competitive budget
-    allocation.independent = Math.floor(resources * competitivePct * 0.3); // 30% to independent (safe points)
+    // Competitive pool - adjust split based on modifiers
+    const independentRatio = hasIndependentBoost ? 0.5 : 0.3;
+    allocation.competitive = Math.floor(resources * competitivePct * (1 - independentRatio));
+    allocation.independent = Math.floor(resources * competitivePct * independentRatio);
 
-    // Cooperative pool
-    allocation.synergy = Math.floor(resources * cooperativePct * 0.5); // 50% synergy (scales with participants)
-    allocation.cooperation = Math.floor(resources * cooperativePct * 0.5); // 50% cooperation (high risk/reward)
+    // Cooperative pool - adjust split based on modifiers
+    const coopRatio = hasCooperationBoost ? 0.65 : 0.5;
+    allocation.synergy = Math.floor(resources * cooperativePct * (1 - coopRatio));
+    allocation.cooperation = Math.floor(resources * cooperativePct * coopRatio);
 
     // Handle remainder - distribute to personality's preferred type
     const total = Object.values(allocation).reduce((a, b) => a + b, 0);
@@ -177,11 +255,12 @@ export class RealisticAdaptiveAgent {
 
   /**
    * Distribute allocation to cells. AI focuses on fewer cells to maximize impact.
-   * Now prioritizes:
-   * 1. Cells that boost WEAK indices (survival mode)
-   * 2. Cells specialized by the region (normal mode)
+   * Uses scoring system to pick best cells:
+   * 1. Cells that boost WEAK indices (survival mode) - highest priority
+   * 2. Cells specialized by the region
+   * 3. Cells with better modifier boosts
    */
-  distributeToCells(allocation: AllocationByType, nationalIndices?: NationalIndices): Placements {
+  distributeToCells(allocation: AllocationByType, nationalIndices?: NationalIndices, event?: TurnEvent): Placements {
     const placements: Placements = {};
     const region = REGION_MAP[this.teamId as RegionId];
 
@@ -193,48 +272,64 @@ export class RealisticAdaptiveAgent {
           .map(([name]) => name)
       : [];
 
+    // Get modifier info for cell scoring
+    const fixedMod = event ? FIXED_MODIFIERS[event.fixedModifier as FixedModifierId] : null;
+    const cellBoosts = fixedMod?.effect?.cellMultipliers || {};
+
     // Project cells - focus on one project cell
     if (allocation.project > 0) {
       const focusCell = shuffleArray(PROJECT_CELLS)[0];
       placements[focusCell.id] = allocation.project;
     }
 
-    // Helper to focus resources on ONE cell per type (sometimes 2)
+    // === IMPROVEMENT #5: Smarter Cell Selection ===
+    // Score cells by value instead of random shuffle
+    const scoreCells = (cells: ReturnType<typeof getCellsByType>, type: CellType) => {
+      return cells.map((cell) => {
+        let score = Math.random() * 2; // Small random factor (0-2) for variety
+        
+        // Priority 1: Cells that boost WEAK indices (+5 per weak index)
+        const boostedWeakCount = weakIndices.filter((idx) => cell.indices.includes(idx)).length;
+        if (boostedWeakCount > 0 && this.survivalMode) {
+          score += boostedWeakCount * 5;
+        }
+        
+        // Priority 2: Cells specialized by region (+3)
+        const isSpecialized = region?.specializedIndices.some((idx) => cell.indices.includes(idx));
+        if (isSpecialized) {
+          score += 3;
+        }
+        
+        // Priority 3: Cells with modifier boost (+2)
+        const typeBoost = cellBoosts[type] ?? 1;
+        if (typeBoost > 1) {
+          score += 2;
+        }
+        
+        return { cell, score };
+      }).sort((a, b) => b.score - a.score);
+    };
+
+    // Helper to focus resources on highest-scored cells
     const distributeToType = (type: CellType, amount: number) => {
       if (amount <= 0) return;
       const cells = getCellsByType(type);
+      const scoredCells = scoreCells(cells, type);
+      
+      // Pick top 1-2 cells based on personality
+      const numCells = this.personality === 'opportunist' || Math.random() < 0.3 ? 
+        Math.min(2, scoredCells.length) : 1;
+      const chosen = scoredCells.slice(0, numCells);
 
-      // Priority 1: Cells that boost WEAK indices (survival mode takes precedence)
-      const boostsWeakIndex = cells.filter((c) => weakIndices.some((idx) => c.indices.includes(idx)));
-
-      // Priority 2: Cells specialized by region
-      const specialized = cells.filter((c) => region?.specializedIndices.some((idx) => c.indices.includes(idx)));
-
-      // Priority 3: Everything else
-      const others = cells.filter((c) => !boostsWeakIndex.includes(c) && !specialized.includes(c));
-
-      let pool: typeof cells;
-      if (boostsWeakIndex.length > 0 && this.survivalMode) {
-        // Survival mode: 60% chance to pick cells boosting weak indices
-        pool = Math.random() < 0.6 ? shuffleArray(boostsWeakIndex) : shuffleArray(cells);
-      } else if (specialized.length > 0) {
-        // Normal mode: 60% chance to pick from specialized list
-        pool = Math.random() < 0.6 ? shuffleArray(specialized) : shuffleArray(cells);
+      if (numCells === 1 || chosen.length === 1) {
+        placements[chosen[0].cell.id] = (placements[chosen[0].cell.id] || 0) + amount;
       } else {
-        pool = shuffleArray(cells);
-      }
-
-      const numCells = Math.random() < 0.7 ? 1 : Math.min(2, pool.length);
-      const chosen = pool.slice(0, numCells);
-
-      if (numCells === 1) {
-        placements[chosen[0].id] = (placements[chosen[0].id] || 0) + amount;
-      } else {
+        // Split 70-30 between top two
         const primary = Math.ceil(amount * 0.7);
         const secondary = amount - primary;
-        placements[chosen[0].id] = (placements[chosen[0].id] || 0) + primary;
+        placements[chosen[0].cell.id] = (placements[chosen[0].cell.id] || 0) + primary;
         if (chosen[1] && secondary > 0) {
-          placements[chosen[1].id] = (placements[chosen[1].id] || 0) + secondary;
+          placements[chosen[1].cell.id] = (placements[chosen[1].cell.id] || 0) + secondary;
         }
       }
     };
@@ -253,10 +348,11 @@ export class RealisticAdaptiveAgent {
     avgScore: number,
     nationalIndices: NationalIndices,
     event: TurnEvent,
-    resources: number = RESOURCES_PER_TURN
+    resources: number = RESOURCES_PER_TURN,
+    activeTeams: number = 6
   ): Placements {
-    const allocation = this.decideAllocation(turn, myScore, avgScore, nationalIndices, event, resources);
-    return this.distributeToCells(allocation, nationalIndices);
+    const allocation = this.decideAllocation(turn, myScore, avgScore, nationalIndices, event, resources, activeTeams);
+    return this.distributeToCells(allocation, nationalIndices, event);
   }
 }
 

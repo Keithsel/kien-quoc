@@ -525,7 +525,8 @@ export class OnlineMode implements IGameMode {
           avgScore,
           data.nationalIndices as NationalIndices,
           event,
-          resources
+          resources,
+          activeTeams.length
         );
 
         await update(ref(db!, `${GAME_PATH}/teams/${regionId}`), {

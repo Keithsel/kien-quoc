@@ -89,6 +89,7 @@ export function hasAgent(regionId: RegionId): boolean {
 /**
  * Generate placements for a single AI agent.
  * @param resources - Optional custom RP for this team (includes underdog bonus)
+ * @param activeTeams - Number of active teams for project estimation
  */
 export function generatePlacement(
   regionId: RegionId,
@@ -97,10 +98,11 @@ export function generatePlacement(
   avgScore: number,
   nationalIndices: NationalIndices,
   event: TurnEvent,
-  resources?: number
+  resources?: number,
+  activeTeams: number = 6
 ): Placements {
   const agent = getOrCreateAgent(regionId);
-  return agent.generatePlacements(turn, teamScore, avgScore, nationalIndices, event, resources);
+  return agent.generatePlacements(turn, teamScore, avgScore, nationalIndices, event, resources, activeTeams);
 }
 
 /**
@@ -116,15 +118,16 @@ export function generateAllPlacements(
 ): Record<RegionId, Placements> {
   const result: Record<RegionId, Placements> = {} as Record<RegionId, Placements>;
 
-  // Calculate average score
+  // Calculate average score and active team count
   const scores = Object.values(teamScores);
   const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  const activeTeams = scores.length;
 
   for (const regionId of aiAgents.keys()) {
     const teamScore = teamScores[regionId] ?? 0;
     // Calculate team-specific RP (includes underdog bonus)
     const resources = getTeamRpForTurn(regionId, teamScores, turn);
-    result[regionId] = generatePlacement(regionId, turn, teamScore, avgScore, nationalIndices, event, resources);
+    result[regionId] = generatePlacement(regionId, turn, teamScore, avgScore, nationalIndices, event, resources, activeTeams);
   }
 
   return result;
