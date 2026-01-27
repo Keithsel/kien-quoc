@@ -11,6 +11,18 @@
   }
 }
 
+/* Normalize font size for high-DPI displays (macOS Retina) */
+html {
+  font-size: 16px;
+  /* On smaller screens or high-DPI, scale down slightly */
+  @media screen and (max-width: 1440px) {
+    font-size: 14px;
+  }
+  @media screen and (max-width: 1280px) {
+    font-size: 13px;
+  }
+}
+
 /* Only set background, let Tailwind handle text colors */
 body {
   background: rgb(var(--background));
