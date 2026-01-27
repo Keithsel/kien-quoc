@@ -4,7 +4,6 @@ Nội dung game lấy bối cảnh Việt Nam thời kỳ Đổi Mới (1986-200
 
 ## Chạy game
 
-- Truy cập [https://kien-quoc-game-2026.web.app/](https://kien-quoc-game-2026.web.app/)
 - Hoặc tải app Tauri từ [Release](https://github.com/Keithsel/kien-quoc/releases)
 
 ## Dev
