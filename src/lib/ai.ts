@@ -120,6 +120,12 @@ export class RealisticAdaptiveAgent {
     const hasIndependentBoost = (cellBoosts.independent ?? 1) > 1;
     const hasProjectBoost = (fixedMod?.effect?.projectRpMultiplier ?? 1) > 1;
 
+    // === IMPROVEMENT #6: Underdog Strategy ===
+    // Underdogs should AVOID competitive (risky, only 1 winner gets 1.75x, losers get 0.5x)
+    // Instead, prefer: independent (safe 1.5x), synergy (1.5x scales), cooperation (2x if >=2)
+    const isUnderdog = myScore < avgScore * 0.9; // Bottom performers
+    const isLeader = myScore > avgScore * 1.1; // Top performers
+
     // === IMPROVEMENT #4: Turn-Aware Strategy (triggered randomly in last turns) ===
     const isLastTurns = turn >= MAX_TURNS - 1; // Turn 7-8
     const shouldMaximizePoints = isLastTurns && Math.random() < 0.6; // 60% chance to play aggressive in endgame
@@ -127,18 +133,25 @@ export class RealisticAdaptiveAgent {
     if (shouldMaximizePoints && !this.survivalMode) {
       // Endgame: maximize points, contribute only minimum to project
       projectPct = minProjectRP / resources;
-      competitivePct = 0.50 + Math.random() * 0.15; // 50-65% - be greedy!
-      cooperativePct = 1.0 - projectPct - competitivePct;
+      if (isUnderdog) {
+        // Underdogs: use safe strategies even in endgame
+        competitivePct = 0.25 + Math.random() * 0.10; // 25-35% competitive (reduced)
+        cooperativePct = 1.0 - projectPct - competitivePct; // More to synergy/coop/independent
+      } else {
+        competitivePct = 0.45 + Math.random() * 0.15; // 45-60% - leaders can be greedy
+        cooperativePct = 1.0 - projectPct - competitivePct;
+      }
     } else {
       // Normal personality-based behavior with modifier awareness
       switch (this.personality) {
         case 'aggressive':
           this.currentTendency = Math.max(0.2, this.baseTendency - turn * 0.015);
-          // Aggressive: minimum project, maximum competitive
           projectPct = this.survivalMode ? 0.35 : minProjectRP / resources;
           
-          // Lean into competitive (45-55%)
-          if (hasCompetitiveBoost) {
+          if (isUnderdog) {
+            // Underdog aggressive: pivot to independent (safe 1.5x)
+            competitivePct = 0.30 + Math.random() * 0.10; // 30-40% (reduced from 45-55%)
+          } else if (hasCompetitiveBoost) {
             competitivePct = 0.50 + Math.random() * 0.10;
           } else {
             competitivePct = 0.45 + Math.random() * 0.10;
@@ -147,65 +160,63 @@ export class RealisticAdaptiveAgent {
           break;
 
         case 'cooperative':
-          this.currentTendency = Math.min(0.90, this.baseTendency + turn * 0.015);
-          // Cooperative: slightly more to project, but still compete
+          this.currentTendency = Math.min(0.95, this.baseTendency + turn * 0.02);
           projectPct = this.survivalMode ? 0.40 : (hasProjectBoost ? 0.35 : 0.30);
           
-          // Lean into synergy/coop (35-45%)
+          // STRONG lean into synergy/coop (50-60%) - this is their identity!
           if (hasSynergyBoost || hasCooperationBoost) {
-            cooperativePct = 0.40 + Math.random() * 0.10;
+            cooperativePct = 0.55 + Math.random() * 0.10; // 55-65% when boosted
           } else {
-            cooperativePct = 0.35 + Math.random() * 0.10;
+            cooperativePct = 0.50 + Math.random() * 0.10; // 50-60% baseline
           }
-          // Still compete for points (at least 25%)
-          competitivePct = Math.max(0.25, 1.0 - projectPct - cooperativePct);
+          // Minimal competitive - they believe in cooperation
+          competitivePct = Math.max(0.10, 1.0 - projectPct - cooperativePct);
           break;
 
         case 'opportunist':
-          // Opportunist: flip strategy based on modifiers, but always compete
-          if (hasCompetitiveBoost || hasIndependentBoost) {
+          // Opportunist: flip strategy based on modifiers and position
+          if (isUnderdog) {
+            // Underdog opportunist: favor safe strategies
+            this.currentTendency = 0.55 + Math.random() * 0.15;
+            projectPct = this.survivalMode ? 0.35 : 0.25;
+            cooperativePct = 0.45 + Math.random() * 0.10; // Heavy synergy/coop/independent
+            competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
+          } else if (hasCompetitiveBoost || hasIndependentBoost) {
             this.currentTendency = 0.25 + Math.random() * 0.10;
             projectPct = this.survivalMode ? 0.30 : minProjectRP / resources;
-            competitivePct = 0.50 + Math.random() * 0.10;
+            competitivePct = 0.45 + Math.random() * 0.10;
             cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
           } else if (hasSynergyBoost || hasCooperationBoost) {
             this.currentTendency = 0.65 + Math.random() * 0.15;
             projectPct = this.survivalMode ? 0.35 : 0.25;
-            cooperativePct = 0.40 + Math.random() * 0.10;
-            competitivePct = Math.max(0.20, 1.0 - projectPct - cooperativePct);
+            cooperativePct = 0.45 + Math.random() * 0.10;
+            competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
           } else {
-            // Random flip
+            // Random flip with moderate ranges
             if (Math.random() < 0.5) {
-              this.currentTendency = 0.25 + Math.random() * 0.10;
+              this.currentTendency = 0.30 + Math.random() * 0.10;
               projectPct = this.survivalMode ? 0.30 : minProjectRP / resources;
-              competitivePct = 0.50 + Math.random() * 0.10;
-              cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
+              competitivePct = 0.40 + Math.random() * 0.10;
+              cooperativePct = Math.max(0.15, 1.0 - projectPct - competitivePct);
             } else {
-              this.currentTendency = 0.65 + Math.random() * 0.15;
+              this.currentTendency = 0.60 + Math.random() * 0.15;
               projectPct = this.survivalMode ? 0.35 : 0.25;
-              cooperativePct = 0.40 + Math.random() * 0.10;
-              competitivePct = Math.max(0.20, 1.0 - projectPct - cooperativePct);
+              cooperativePct = 0.45 + Math.random() * 0.10;
+              competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
             }
           }
           break;
 
         case 'balanced':
         default: {
-          // Adapt based on score difference
-          if (myScore < avgScore * 0.9) {
-            this.currentTendency = Math.min(0.7, this.currentTendency + 0.10);
-          } else if (myScore > avgScore * 1.1) {
-            this.currentTendency = Math.max(0.3, this.currentTendency - 0.08);
-          }
-          
           // Smart project contribution - fair share, capped
           projectPct = this.survivalMode ? this.projectPriority : Math.max(minProjectRP / resources, 0.25);
           
           const remaining = 1.0 - projectPct;
           
-          // Adjust for modifier boosts
-          let competitiveWeight = 1 - this.currentTendency;
-          let cooperativeWeight = this.currentTendency;
+          // Adjust weights based on position and modifiers
+          let competitiveWeight = isUnderdog ? 0.3 : 0.5; // Underdogs reduce competitive
+          let cooperativeWeight = isUnderdog ? 0.7 : 0.5; // Underdogs favor coop/synergy
           
           if (hasCompetitiveBoost || hasIndependentBoost) competitiveWeight *= 1.2;
           if (hasSynergyBoost || hasCooperationBoost) cooperativeWeight *= 1.2;
@@ -223,28 +234,70 @@ export class RealisticAdaptiveAgent {
     const rawProjectRP = Math.floor(resources * projectPct);
     allocation.project = Math.min(rawProjectRP, maxProjectRP);
     
-    // Redirect excess project RP to competitive cells (maximize personal gain)
+    // Redirect excess project RP based on position
     const excessProject = rawProjectRP - allocation.project;
 
-    // Competitive pool - adjust split based on modifiers
-    const independentRatio = hasIndependentBoost ? 0.5 : 0.3;
-    allocation.competitive = Math.floor(resources * competitivePct * (1 - independentRatio)) + Math.ceil(excessProject * 0.7);
-    allocation.independent = Math.floor(resources * competitivePct * independentRatio) + Math.floor(excessProject * 0.3);
+    // UNDERDOGS: favor synergy/cooperation over competitive/independent
+    // Independent only used if hasIndependentBoost or as overflow
+    if (isUnderdog) {
+      // Competitive pool: minimal competitive, independent only if boosted
+      const competitiveRP = Math.floor(resources * competitivePct);
+      if (hasIndependentBoost) {
+        // Has independent boost - split between competitive and independent
+        allocation.competitive = Math.floor(competitiveRP * 0.4);
+        allocation.independent = competitiveRP - allocation.competitive;
+      } else {
+        // No boost - minimize independent, more to competitive (but still low)
+        allocation.competitive = Math.floor(competitiveRP * 0.7);
+        allocation.independent = competitiveRP - allocation.competitive;
+      }
+      
+      // Cooperative pool: heavy synergy and cooperation (underdogs' strength)
+      const coopRP = Math.floor(resources * cooperativePct) + excessProject; // Excess goes here!
+      const coopRatio = hasCooperationBoost ? 0.6 : 0.5;
+      allocation.synergy = Math.floor(coopRP * (1 - coopRatio));
+      allocation.cooperation = coopRP - allocation.synergy;
+    } else {
+      // Leaders/normal: original split logic
+      const independentRatio = hasIndependentBoost ? 0.5 : 0.3;
+      
+      if (this.personality === 'cooperative') {
+        // Cooperative personality: minimize competitive, redirect excess to synergy
+        allocation.competitive = Math.floor(resources * competitivePct * 0.6); // Less competitive
+        allocation.independent = Math.floor(resources * competitivePct * 0.4);
+        
+        // Cooperative pool - favor synergy (scales with participation)
+        const coopRP = Math.floor(resources * cooperativePct) + excessProject; // Excess to coop!
+        const synergyRatio = hasSynergyBoost ? 0.6 : 0.55; // Slightly favor synergy
+        allocation.synergy = Math.floor(coopRP * synergyRatio);
+        allocation.cooperation = coopRP - allocation.synergy;
+      } else {
+        allocation.competitive = Math.floor(resources * competitivePct * (1 - independentRatio)) + Math.ceil(excessProject * 0.7);
+        allocation.independent = Math.floor(resources * competitivePct * independentRatio) + Math.floor(excessProject * 0.3);
 
-    // Cooperative pool - adjust split based on modifiers
-    const coopRatio = hasCooperationBoost ? 0.65 : 0.5;
-    allocation.synergy = Math.floor(resources * cooperativePct * (1 - coopRatio));
-    allocation.cooperation = Math.floor(resources * cooperativePct * coopRatio);
+        // Cooperative pool - adjust split based on modifiers
+        const coopRatio = hasCooperationBoost ? 0.65 : 0.5;
+        allocation.synergy = Math.floor(resources * cooperativePct * (1 - coopRatio));
+        allocation.cooperation = Math.floor(resources * cooperativePct * coopRatio);
+      }
+    }
 
-    // Handle remainder - distribute to competitive cells (maximize personal gain)
+    // Handle remainder - distribute based on position and personality
     const total = Object.values(allocation).reduce((a, b) => a + b, 0);
     const diff = resources - total;
     if (diff > 0) {
-      // Extra RP goes to competitive cells for most personalities
-      if (this.personality === 'cooperative') {
+      if (isUnderdog) {
+        // Underdogs: extra RP to synergy (scales with participation)
         allocation.synergy += diff;
+      } else if (this.personality === 'cooperative') {
+        // Cooperative: alternate between synergy and cooperation
+        if (Math.random() < 0.5) {
+          allocation.synergy += diff;
+        } else {
+          allocation.cooperation += diff;
+        }
       } else {
-        allocation.competitive += diff; // Maximize personal scoring
+        allocation.competitive += diff; // Leaders can maximize with competition
       }
     } else if (diff < 0) {
       for (const key of ['independent', 'cooperation', 'synergy', 'competitive'] as const) {
@@ -311,6 +364,11 @@ export class RealisticAdaptiveAgent {
           score += 2;
         }
         
+        // Priority 4: Cooperative personality bonus for synergy/coop cells (+2)
+        if (this.personality === 'cooperative' && (type === 'synergy' || type === 'cooperation')) {
+          score += 2;
+        }
+        
         return { cell, score };
       }).sort((a, b) => b.score - a.score);
     };
@@ -322,7 +380,8 @@ export class RealisticAdaptiveAgent {
       const scoredCells = scoreCells(cells, type);
       
       // Pick top 1-2 cells based on personality
-      const numCells = this.personality === 'opportunist' || Math.random() < 0.3 ? 
+      // Cooperative personality spreads to more cells (synergy benefits from participation)
+      const numCells = this.personality === 'opportunist' || this.personality === 'cooperative' || Math.random() < 0.3 ? 
         Math.min(2, scoredCells.length) : 1;
       const chosen = scoredCells.slice(0, numCells);
 
