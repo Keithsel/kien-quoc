@@ -81,18 +81,19 @@ export class RealisticAdaptiveAgent {
     if (minIndex <= 3 || predictedMinAtEnd <= 0) {
       // Critical mode - heavy project focus to boost indices
       this.survivalMode = true;
-      this.projectPriority = 0.55;
+      this.projectPriority = 0.50;
     } else if (minIndex <= 5 || predictedMinAtEnd <= 2) {
       // Survival mode - increased project priority
       this.survivalMode = true;
-      this.projectPriority = Math.min(0.50, this.projectPriority + 0.10);
+      this.projectPriority = 0.40;
     } else if (minIndex <= 7) {
       // Caution mode - moderate project priority
       this.survivalMode = false;
-      this.projectPriority = 0.35;
-    } else {
-      this.survivalMode = false;
       this.projectPriority = 0.30;
+    } else {
+      // Healthy indices - be selfish, focus on scoring
+      this.survivalMode = false;
+      this.projectPriority = 0.25;
     }
 
     // === IMPROVEMENT #2: Smart Project Contribution ===
@@ -100,8 +101,10 @@ export class RealisticAdaptiveAgent {
     const scaledMinTotal = Math.ceil(event.minTotal * (activeTeams / 6));
     const fairShareProject = Math.ceil(scaledMinTotal / activeTeams);
     
-    // MINIMUM project contribution: at least 80% of fair share for ALL personalities
-    const minProjectRP = Math.max(3, Math.ceil(fairShareProject * 0.8)); // At least 3 RP
+    // Smart project contribution: contribute fair share, not more (unless survival mode)
+    // This ensures project success without wasting RP that could score points
+    const minProjectRP = Math.max(3, Math.ceil(fairShareProject * 0.85)); // 85% of fair share minimum
+    const maxProjectRP = this.survivalMode ? fairShareProject + 2 : fairShareProject; // Cap at fair share (or +2 if survival)
     
     let projectPct: number;
     let competitivePct: number;
@@ -122,67 +125,66 @@ export class RealisticAdaptiveAgent {
     const shouldMaximizePoints = isLastTurns && Math.random() < 0.6; // 60% chance to play aggressive in endgame
 
     if (shouldMaximizePoints && !this.survivalMode) {
-      // Endgame: maximize points, but still contribute minimum to project
-      const minProjectPct = minProjectRP / resources;
-      projectPct = Math.max(minProjectPct, 0.15 + Math.random() * 0.1); // 15-25%
-      competitivePct = 0.45 + Math.random() * 0.15; // 45-60% (slightly reduced)
+      // Endgame: maximize points, contribute only minimum to project
+      projectPct = minProjectRP / resources;
+      competitivePct = 0.50 + Math.random() * 0.15; // 50-65% - be greedy!
       cooperativePct = 1.0 - projectPct - competitivePct;
     } else {
       // Normal personality-based behavior with modifier awareness
-      // REDUCED POLARIZATION: narrower ranges for all personalities
       switch (this.personality) {
         case 'aggressive':
           this.currentTendency = Math.max(0.2, this.baseTendency - turn * 0.015);
-          // Ensure minimum project contribution
-          projectPct = Math.max(minProjectRP / resources, this.survivalMode ? 0.35 : 0.25);
+          // Aggressive: minimum project, maximum competitive
+          projectPct = this.survivalMode ? 0.35 : minProjectRP / resources;
           
-          // Lean into competitive if boosted (REDUCED: 40-50% instead of 55-70%)
+          // Lean into competitive (45-55%)
           if (hasCompetitiveBoost) {
-            competitivePct = 0.40 + Math.random() * 0.10;
+            competitivePct = 0.50 + Math.random() * 0.10;
           } else {
-            competitivePct = 0.35 + Math.random() * 0.10; // 35-45%
+            competitivePct = 0.45 + Math.random() * 0.10;
           }
           cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
           break;
 
         case 'cooperative':
           this.currentTendency = Math.min(0.90, this.baseTendency + turn * 0.015);
-          projectPct = Math.max(minProjectRP / resources, hasProjectBoost ? 0.40 : 0.35);
+          // Cooperative: slightly more to project, but still compete
+          projectPct = this.survivalMode ? 0.40 : (hasProjectBoost ? 0.35 : 0.30);
           
-          // Lean into synergy/coop if boosted (REDUCED: 40-50% instead of 55-70%)
+          // Lean into synergy/coop (35-45%)
           if (hasSynergyBoost || hasCooperationBoost) {
             cooperativePct = 0.40 + Math.random() * 0.10;
           } else {
-            cooperativePct = 0.35 + Math.random() * 0.10; // 35-45%
+            cooperativePct = 0.35 + Math.random() * 0.10;
           }
-          // Give competitive cells a fair share too (ADDED: minimum 15%)
-          competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
+          // Still compete for points (at least 25%)
+          competitivePct = Math.max(0.25, 1.0 - projectPct - cooperativePct);
           break;
 
         case 'opportunist':
-          // Still flip between styles but with less extreme ranges
+          // Opportunist: flip strategy based on modifiers, but always compete
           if (hasCompetitiveBoost || hasIndependentBoost) {
             this.currentTendency = 0.25 + Math.random() * 0.10;
-            projectPct = Math.max(minProjectRP / resources, 0.25);
-            competitivePct = 0.40 + Math.random() * 0.10;
+            projectPct = this.survivalMode ? 0.30 : minProjectRP / resources;
+            competitivePct = 0.50 + Math.random() * 0.10;
             cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
           } else if (hasSynergyBoost || hasCooperationBoost) {
             this.currentTendency = 0.65 + Math.random() * 0.15;
-            projectPct = Math.max(minProjectRP / resources, 0.35);
+            projectPct = this.survivalMode ? 0.35 : 0.25;
             cooperativePct = 0.40 + Math.random() * 0.10;
-            competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
+            competitivePct = Math.max(0.20, 1.0 - projectPct - cooperativePct);
           } else {
-            // Random flip with reduced variance
+            // Random flip
             if (Math.random() < 0.5) {
               this.currentTendency = 0.25 + Math.random() * 0.10;
-              projectPct = Math.max(minProjectRP / resources, 0.25);
-              competitivePct = 0.40 + Math.random() * 0.10;
+              projectPct = this.survivalMode ? 0.30 : minProjectRP / resources;
+              competitivePct = 0.50 + Math.random() * 0.10;
               cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
             } else {
               this.currentTendency = 0.65 + Math.random() * 0.15;
-              projectPct = Math.max(minProjectRP / resources, 0.35);
+              projectPct = this.survivalMode ? 0.35 : 0.25;
               cooperativePct = 0.40 + Math.random() * 0.10;
-              competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
+              competitivePct = Math.max(0.20, 1.0 - projectPct - cooperativePct);
             }
           }
           break;
@@ -196,8 +198,8 @@ export class RealisticAdaptiveAgent {
             this.currentTendency = Math.max(0.3, this.currentTendency - 0.08);
           }
           
-          // Smart project contribution - always contribute at least minimum
-          projectPct = Math.max(minProjectRP / resources, this.projectPriority);
+          // Smart project contribution - fair share, capped
+          projectPct = this.survivalMode ? this.projectPriority : Math.max(minProjectRP / resources, 0.25);
           
           const remaining = 1.0 - projectPct;
           
@@ -217,28 +219,32 @@ export class RealisticAdaptiveAgent {
     }
 
     // Allocate resources with personality-influenced distribution
-    allocation.project = Math.floor(resources * projectPct);
+    // CAP project at fair share to maximize personal scoring potential
+    const rawProjectRP = Math.floor(resources * projectPct);
+    allocation.project = Math.min(rawProjectRP, maxProjectRP);
+    
+    // Redirect excess project RP to competitive cells (maximize personal gain)
+    const excessProject = rawProjectRP - allocation.project;
 
     // Competitive pool - adjust split based on modifiers
     const independentRatio = hasIndependentBoost ? 0.5 : 0.3;
-    allocation.competitive = Math.floor(resources * competitivePct * (1 - independentRatio));
-    allocation.independent = Math.floor(resources * competitivePct * independentRatio);
+    allocation.competitive = Math.floor(resources * competitivePct * (1 - independentRatio)) + Math.ceil(excessProject * 0.7);
+    allocation.independent = Math.floor(resources * competitivePct * independentRatio) + Math.floor(excessProject * 0.3);
 
     // Cooperative pool - adjust split based on modifiers
     const coopRatio = hasCooperationBoost ? 0.65 : 0.5;
     allocation.synergy = Math.floor(resources * cooperativePct * (1 - coopRatio));
     allocation.cooperation = Math.floor(resources * cooperativePct * coopRatio);
 
-    // Handle remainder - distribute to personality's preferred type
+    // Handle remainder - distribute to competitive cells (maximize personal gain)
     const total = Object.values(allocation).reduce((a, b) => a + b, 0);
     const diff = resources - total;
     if (diff > 0) {
-      if (this.personality === 'aggressive') {
-        allocation.competitive += diff;
-      } else if (this.personality === 'cooperative') {
+      // Extra RP goes to competitive cells for most personalities
+      if (this.personality === 'cooperative') {
         allocation.synergy += diff;
       } else {
-        allocation.project += diff;
+        allocation.competitive += diff; // Maximize personal scoring
       }
     } else if (diff < 0) {
       for (const key of ['independent', 'cooperation', 'synergy', 'competitive'] as const) {
