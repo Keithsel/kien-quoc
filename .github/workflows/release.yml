@@ -43,7 +43,6 @@ jobs:
           bun-version: latest
 
       - name: Install frontend dependencies
-        working-directory: desktop/kien-quoc/app
         run: bun install
 
       - name: Build Tauri app
@@ -60,7 +59,6 @@ jobs:
           VITE_HOST_PASSWORD: ${{ secrets.VITE_HOST_PASSWORD }}
           VITE_TEST_MODE: "false"
         with:
-          projectPath: desktop/kien-quoc/app
           args: --target ${{ matrix.target }}
 
       - name: Upload artifacts
@@ -68,11 +66,11 @@ jobs:
         with:
           name: kien-quoc-${{ matrix.target }}
           path: |
-            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
-            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
-            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
-            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
-            desktop/kien-quoc/app/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
 
   release:
     needs: build
