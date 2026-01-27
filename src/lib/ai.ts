@@ -78,28 +78,30 @@ export class RealisticAdaptiveAgent {
     const turnsRemaining = MAX_TURNS - turn;
     const predictedMinAtEnd = minIndex - turnsRemaining; // Indices drop by 1 each turn
     
-    if (minIndex <= 2 || predictedMinAtEnd <= 0) {
+    if (minIndex <= 3 || predictedMinAtEnd <= 0) {
       // Critical mode - heavy project focus to boost indices
       this.survivalMode = true;
       this.projectPriority = 0.55;
-    } else if (minIndex <= 4 || predictedMinAtEnd <= 2) {
+    } else if (minIndex <= 5 || predictedMinAtEnd <= 2) {
       // Survival mode - increased project priority
       this.survivalMode = true;
-      this.projectPriority = Math.min(0.45, this.projectPriority + 0.08);
-    } else if (minIndex >= 8) {
+      this.projectPriority = Math.min(0.50, this.projectPriority + 0.10);
+    } else if (minIndex <= 7) {
+      // Caution mode - moderate project priority
       this.survivalMode = false;
-      this.projectPriority = Math.max(0.25, this.projectPriority - 0.02);
+      this.projectPriority = 0.35;
+    } else {
+      this.survivalMode = false;
+      this.projectPriority = 0.30;
     }
 
     // === IMPROVEMENT #2: Smart Project Contribution ===
     // Estimate if project will succeed and adjust contribution
     const scaledMinTotal = Math.ceil(event.minTotal * (activeTeams / 6));
-    const expectedProjectRPPerTeam = 4; // Average ~4 RP per team to project
-    const expectedTotalProjectRP = activeTeams * expectedProjectRPPerTeam;
-    const projectLikelyToSucceed = expectedTotalProjectRP >= scaledMinTotal * 0.9;
-    
-    // Calculate fair share for project
     const fairShareProject = Math.ceil(scaledMinTotal / activeTeams);
+    
+    // MINIMUM project contribution: at least 80% of fair share for ALL personalities
+    const minProjectRP = Math.max(3, Math.ceil(fairShareProject * 0.8)); // At least 3 RP
     
     let projectPct: number;
     let competitivePct: number;
@@ -120,65 +122,67 @@ export class RealisticAdaptiveAgent {
     const shouldMaximizePoints = isLastTurns && Math.random() < 0.6; // 60% chance to play aggressive in endgame
 
     if (shouldMaximizePoints && !this.survivalMode) {
-      // Endgame: maximize points, indices matter less
-      projectPct = 0.1 + Math.random() * 0.1; // 10-20% minimum to project
-      competitivePct = 0.5 + Math.random() * 0.2; // 50-70% to competitive for points
+      // Endgame: maximize points, but still contribute minimum to project
+      const minProjectPct = minProjectRP / resources;
+      projectPct = Math.max(minProjectPct, 0.15 + Math.random() * 0.1); // 15-25%
+      competitivePct = 0.45 + Math.random() * 0.15; // 45-60% (slightly reduced)
       cooperativePct = 1.0 - projectPct - competitivePct;
     } else {
       // Normal personality-based behavior with modifier awareness
+      // REDUCED POLARIZATION: narrower ranges for all personalities
       switch (this.personality) {
         case 'aggressive':
-          this.currentTendency = Math.max(0.1, this.baseTendency - turn * 0.02);
-          projectPct = projectLikelyToSucceed ? 0.15 : Math.min(0.35, fairShareProject / resources);
+          this.currentTendency = Math.max(0.2, this.baseTendency - turn * 0.015);
+          // Ensure minimum project contribution
+          projectPct = Math.max(minProjectRP / resources, this.survivalMode ? 0.35 : 0.25);
           
-          // Lean into competitive if boosted
+          // Lean into competitive if boosted (REDUCED: 40-50% instead of 55-70%)
           if (hasCompetitiveBoost) {
-            competitivePct = 0.55 + Math.random() * 0.15; // 55-70%
+            competitivePct = 0.40 + Math.random() * 0.10;
           } else {
-            competitivePct = 0.45 + Math.random() * 0.15; // 45-60%
+            competitivePct = 0.35 + Math.random() * 0.10; // 35-45%
           }
-          cooperativePct = Math.max(0, 1.0 - projectPct - competitivePct);
+          cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
           break;
 
         case 'cooperative':
-          this.currentTendency = Math.min(0.95, this.baseTendency + turn * 0.02);
-          projectPct = hasProjectBoost ? 0.4 : 0.3 + Math.random() * 0.1;
+          this.currentTendency = Math.min(0.90, this.baseTendency + turn * 0.015);
+          projectPct = Math.max(minProjectRP / resources, hasProjectBoost ? 0.40 : 0.35);
           
-          // Lean into synergy/coop if boosted
+          // Lean into synergy/coop if boosted (REDUCED: 40-50% instead of 55-70%)
           if (hasSynergyBoost || hasCooperationBoost) {
-            cooperativePct = 0.55 + Math.random() * 0.15; // 55-70%
+            cooperativePct = 0.40 + Math.random() * 0.10;
           } else {
-            cooperativePct = 0.45 + Math.random() * 0.15; // 45-60%
+            cooperativePct = 0.35 + Math.random() * 0.10; // 35-45%
           }
-          competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+          // Give competitive cells a fair share too (ADDED: minimum 15%)
+          competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
           break;
 
         case 'opportunist':
-          // Flip between extremes but consider modifiers
+          // Still flip between styles but with less extreme ranges
           if (hasCompetitiveBoost || hasIndependentBoost) {
-            // Go aggressive when competitive cells are boosted
-            this.currentTendency = 0.15 + Math.random() * 0.15;
-            projectPct = 0.15;
-            competitivePct = 0.5 + Math.random() * 0.2;
-            cooperativePct = 1.0 - projectPct - competitivePct;
+            this.currentTendency = 0.25 + Math.random() * 0.10;
+            projectPct = Math.max(minProjectRP / resources, 0.25);
+            competitivePct = 0.40 + Math.random() * 0.10;
+            cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
           } else if (hasSynergyBoost || hasCooperationBoost) {
-            // Go cooperative when synergy/coop cells are boosted
-            this.currentTendency = 0.75 + Math.random() * 0.15;
-            projectPct = 0.35;
-            cooperativePct = 0.5 + Math.random() * 0.15;
-            competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+            this.currentTendency = 0.65 + Math.random() * 0.15;
+            projectPct = Math.max(minProjectRP / resources, 0.35);
+            cooperativePct = 0.40 + Math.random() * 0.10;
+            competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
           } else {
-            // Random flip
+            // Random flip with reduced variance
             if (Math.random() < 0.5) {
-              this.currentTendency = 0.15 + Math.random() * 0.15;
-              projectPct = 0.15;
-              competitivePct = 0.5 + Math.random() * 0.2;
-              cooperativePct = 1.0 - projectPct - competitivePct;
+              this.currentTendency = 0.25 + Math.random() * 0.10;
+              projectPct = Math.max(minProjectRP / resources, 0.25);
+              competitivePct = 0.40 + Math.random() * 0.10;
+              cooperativePct = Math.max(0.1, 1.0 - projectPct - competitivePct);
             } else {
-              this.currentTendency = 0.75 + Math.random() * 0.15;
-              projectPct = 0.35;
-              cooperativePct = 0.5 + Math.random() * 0.15;
-              competitivePct = Math.max(0, 1.0 - projectPct - cooperativePct);
+              this.currentTendency = 0.65 + Math.random() * 0.15;
+              projectPct = Math.max(minProjectRP / resources, 0.35);
+              cooperativePct = 0.40 + Math.random() * 0.10;
+              competitivePct = Math.max(0.15, 1.0 - projectPct - cooperativePct);
             }
           }
           break;
@@ -186,19 +190,14 @@ export class RealisticAdaptiveAgent {
         case 'balanced':
         default: {
           // Adapt based on score difference
-          if (myScore < avgScore * 0.85) {
-            this.currentTendency = Math.min(0.8, this.currentTendency + 0.15);
-          } else if (myScore > avgScore * 1.15) {
-            this.currentTendency = Math.max(0.25, this.currentTendency - 0.1);
+          if (myScore < avgScore * 0.9) {
+            this.currentTendency = Math.min(0.7, this.currentTendency + 0.10);
+          } else if (myScore > avgScore * 1.1) {
+            this.currentTendency = Math.max(0.3, this.currentTendency - 0.08);
           }
           
-          // Smart project contribution
-          if (!projectLikelyToSucceed && !this.survivalMode) {
-            // Project unlikely to succeed - contribute fair share or less
-            projectPct = Math.max(0.1, (fairShareProject * 0.8) / resources);
-          } else {
-            projectPct = this.projectPriority;
-          }
+          // Smart project contribution - always contribute at least minimum
+          projectPct = Math.max(minProjectRP / resources, this.projectPriority);
           
           const remaining = 1.0 - projectPct;
           
@@ -206,8 +205,8 @@ export class RealisticAdaptiveAgent {
           let competitiveWeight = 1 - this.currentTendency;
           let cooperativeWeight = this.currentTendency;
           
-          if (hasCompetitiveBoost || hasIndependentBoost) competitiveWeight *= 1.3;
-          if (hasSynergyBoost || hasCooperationBoost) cooperativeWeight *= 1.3;
+          if (hasCompetitiveBoost || hasIndependentBoost) competitiveWeight *= 1.2;
+          if (hasSynergyBoost || hasCooperationBoost) cooperativeWeight *= 1.2;
           
           const totalWeight = competitiveWeight + cooperativeWeight;
           competitivePct = remaining * (competitiveWeight / totalWeight);
